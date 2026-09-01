@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import random
 import sqlite3
 import time
@@ -17,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = ROOT / "static"
 DATA_DIR = ROOT / "sample_data"
-DB_PATH = ROOT / "shelfsense.db"
+DB_PATH = Path("/tmp/shelfsense.db") if os.environ.get("VERCEL") else ROOT / "shelfsense.db"
 PLANOGRAM_PATH = DATA_DIR / "planogram.json"
 
 app = FastAPI(title="ShelfSense AI", version="1.0.0")

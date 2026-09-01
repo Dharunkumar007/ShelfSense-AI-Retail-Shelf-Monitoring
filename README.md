@@ -25,6 +25,10 @@ Open:
 http://127.0.0.1:8000
 ```
 
+## Deploy
+
+This project is ready for Vercel deployment. Import the GitHub repository in Vercel, keep the framework preset as Other, and deploy. More details are in `docs/DEPLOYMENT.md`.
+
 ## Current Prototype
 
 The app uses mock AI detections so the full workflow can be demonstrated without a trained model file. It is ready for YOLOv8 integration by placing a trained `best.pt` file in `models/` and moving inference logic into `backend/detector.py`.
