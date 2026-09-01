@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShelfSense AI</title>
+    <link rel="manifest" href="/static/manifest.json" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">S</span>
+        <div>
+          <strong>ShelfSense AI</strong>
+          <small>Retail Shelf Monitor</small>
+        </div>
+      </div>
+      <nav>
+        <button data-page="dashboard" class="active">Overview</button>
+        <button data-page="monitor">Live Monitor</button>
+        <button data-page="analysis">Shelf Analysis</button>
+        <button data-page="alerts">Alerts</button>
+        <button data-page="admin">Admin</button>
+      </nav>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <h1>AI Shelf Monitoring</h1>
+          <p>Camera input, YOLO-ready detection, planogram comparison, and restock alerts.</p>
+        </div>
+        <div class="actions">
+          <label class="file-picker">
+            <input id="fileInput" type="file" accept="image/*" />
+            Upload Image
+          </label>
+          <button id="scanButton">Scan Shelf</button>
+          <button id="monitorButton" class="dark">Open Monitor</button>
+        </div>
+      </header>
+
+      <section id="dashboardView" class="view active">
+        <div class="metric-grid">
+          <article class="metric">
+            <span>Occupancy</span>
+            <strong id="occupancyValue">0%</strong>
+          </article>
+          <article class="metric">
+            <span>Detected Items</span>
+            <strong id="detectedValue">0</strong>
+          </article>
+          <article class="metric">
+            <span>Active Alerts</span>
+            <strong id="alertValue">0</strong>
+          </article>
+          <article class="metric">
+            <span>Shelf Status</span>
+            <strong id="statusBadge" class="badge">Ready</strong>
+          </article>
+        </div>
+        <div class="content-grid">
+          <section class="panel wide">
+            <div class="panel-title">
+              <h2>Store Monitor</h2>
+              <span>Camera Aisle 3</span>
+            </div>
+            <div id="monitorShelf" class="shelf-wrap"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-title">
+              <h2>Stock Trend</h2>
+              <span>Last scans</span>
+            </div>
+            <div id="trendBars" class="bars"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="monitorView" class="view">
+        <section class="monitor-screen">
+          <div class="camera-frame">
+            <div id="uploadPreview" class="upload-preview">
+              <div id="imageLayer"></div>
+              <div id="analysisShelf" class="shelf-wrap"></div>
+            </div>
+          </div>
+          <aside class="monitor-feed">
+            <h2>Live Monitor</h2>
+            <p>Use this screen during prototype demo to show the app-style shelf monitor.</p>
+            <div class="zone-list stack"></div>
+          </aside>
+        </section>
+      </section>
+
+      <section id="analysisView" class="view">
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Shelf Analysis</h2>
+            <span>Planogram comparison</span>
+          </div>
+          <div class="zone-list stack"></div>
+        </section>
+      </section>
+
+      <section id="alertsView" class="view">
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Alerts Center</h2>
+            <span>Restock priority</span>
+          </div>
+          <div id="alertList" class="stack"></div>
+        </section>
+      </section>
+
+      <section id="adminView" class="view">
+        <section class="admin-grid">
+          <article class="panel">
+            <h2>Product Catalog</h2>
+            <input value="Cereal" />
+            <input value="Juice" />
+            <input value="Snacks" />
+          </article>
+          <article class="panel">
+            <h2>Threshold Rules</h2>
+            <label>Low stock below <input value="75%" /></label>
+            <label>Critical below <input value="45%" /></label>
+          </article>
+          <article class="panel">
+            <h2>Camera Zones</h2>
+            <input value="Aisle 3 Monitor" />
+            <input value="Aisle 5 Monitor" />
+            <input value="Entrance Shelf" />
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

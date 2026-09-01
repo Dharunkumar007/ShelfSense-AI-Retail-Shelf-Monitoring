@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+shelfsense.db
+models/*.pt
+.DS_Store

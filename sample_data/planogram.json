@@ -1,0 +1,60 @@
+{
+  "store": "ShelfSense Demo Store",
+  "camera": "Aisle 3 Monitor",
+  "zones": [
+    {
+      "id": "A1",
+      "name": "Top Shelf Left",
+      "product": "Cereal",
+      "expected_count": 8,
+      "bbox": [6, 8, 48, 32],
+      "low_threshold": 75,
+      "critical_threshold": 45
+    },
+    {
+      "id": "A2",
+      "name": "Top Shelf Right",
+      "product": "Juice",
+      "expected_count": 7,
+      "bbox": [52, 8, 94, 32],
+      "low_threshold": 75,
+      "critical_threshold": 45
+    },
+    {
+      "id": "B1",
+      "name": "Middle Shelf Left",
+      "product": "Snacks",
+      "expected_count": 10,
+      "bbox": [6, 38, 48, 62],
+      "low_threshold": 75,
+      "critical_threshold": 45
+    },
+    {
+      "id": "B2",
+      "name": "Middle Shelf Right",
+      "product": "Soap",
+      "expected_count": 9,
+      "bbox": [52, 38, 94, 62],
+      "low_threshold": 75,
+      "critical_threshold": 45
+    },
+    {
+      "id": "C1",
+      "name": "Bottom Shelf Left",
+      "product": "Biscuits",
+      "expected_count": 8,
+      "bbox": [6, 68, 48, 92],
+      "low_threshold": 75,
+      "critical_threshold": 45
+    },
+    {
+      "id": "C2",
+      "name": "Bottom Shelf Right",
+      "product": "Milk",
+      "expected_count": 6,
+      "bbox": [52, 68, 94, 92],
+      "low_threshold": 75,
+      "critical_threshold": 45
+    }
+  ]
+}
