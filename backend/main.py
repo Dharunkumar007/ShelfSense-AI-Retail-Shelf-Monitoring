@@ -14,6 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from backend.detector import detect_products, yolo_model_available
+
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = ROOT / "static"
@@ -203,16 +205,24 @@ def history() -> dict[str, Any]:
 async def analyze(file: UploadFile | None = File(default=None)) -> dict[str, Any]:
     image_data = None
     seed_value = int(time.time())
+    mode = "Mock AI detection. Train YOLOv8 and place models/best.pt to enable real detection."
 
     if file is not None:
         raw = await file.read()
         seed_value = sum(raw[:4096]) + len(raw)
         image_data = f"data:{file.content_type};base64,{base64.b64encode(raw).decode('ascii')}"
+    else:
+        raw = b""
 
-    detections = generate_mock_detections(seed_value)
+    if file is not None and yolo_model_available():
+        detections = detect_products(raw, file.content_type)
+        mode = "YOLOv8 real model detection from models/best.pt."
+    else:
+        detections = generate_mock_detections(seed_value)
+
     analysis = analyze_detections(detections)
     analysis["image"] = image_data
-    analysis["mode"] = "Mock AI detection. Replace with YOLOv8 model in backend/detector.py."
+    analysis["mode"] = mode
     record_scan(file.filename if file else "live-monitor-demo", analysis)
     return analysis
 

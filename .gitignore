@@ -3,4 +3,6 @@ __pycache__/
 *.pyc
 shelfsense.db
 models/*.pt
+training_data/
+runs/
 .DS_Store

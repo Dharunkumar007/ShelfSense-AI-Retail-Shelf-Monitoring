@@ -31,7 +31,37 @@ This project is ready for Vercel deployment. Import the GitHub repository in Ver
 
 ## Current Prototype
 
-The app uses mock AI detections so the full workflow can be demonstrated without a trained model file. It is ready for YOLOv8 integration by placing a trained `best.pt` file in `models/` and moving inference logic into `backend/detector.py`.
+The app uses mock AI detections when no trained model is present. After training, place the model at:
+
+```text
+models/best.pt
+```
+
+Then install YOLO runtime packages and run the app:
+
+```bash
+.venv/bin/python -m pip install ultralytics opencv-python
+.venv/bin/python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Uploaded images will use the real YOLOv8 model automatically.
+
+## Train YOLOv8
+
+Training instructions for another laptop are in:
+
+```text
+docs/TRAINING_ON_FRIEND_LAPTOP.md
+```
+
+Short version:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-training.txt
+.venv/bin/python scripts/prepare_sku110k_yolo.py --dataset-root "/path/to/SKU110K_fixed" --train-limit 1000 --val-limit 200 --test-limit 200
+.venv/bin/python scripts/train_yolov8.py --data training_data/SKU110K_YOLO/data.yaml --epochs 25 --imgsz 640 --batch 8
+```
 
 ## Review Workflow
 
