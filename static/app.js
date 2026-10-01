@@ -8,9 +8,6 @@ const icons = () => window.lucide?.createIcons();
 const level = (s) => /critical/i.test(s) ? "danger" : /low/i.test(s) ? "warn" : "good";
 const date = (t) => new Date(t * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 const empty = (text) => `<div class="empty-row">${escapeHtml(text)}</div>`;
-const descriptions = { dashboard: "Shelf availability, evidence, and action.", monitor: "Current camera observations and detection quality.",
-  analysis: "Zone performance and scan comparison.", alerts: "Ownership, progress, and replenishment records.",
-  inventory: "Expected facings, product assignments, and shelf zones.", reports: "Availability history and operational reports.", admin: "People, camera connections, and system status." };
 function notice(message, type = "") {
   $("#fileName").textContent = message;
   if (!type && ["Complete", "Saved scan"].includes($("#scanState").textContent)) type = "success";
@@ -40,7 +37,6 @@ function setPage(page) {
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `${page}View`));
   $$("[data-page]").forEach((b) => { b.classList.toggle("active", b.dataset.page === page); b.setAttribute("aria-current", b.dataset.page === page ? "page" : "false"); });
   $("#pageTitle").textContent = $(`[data-page="${page}"]`).dataset.title;
-  $("#pageDescription").textContent = descriptions[page];
   if (page !== "monitor") stopCamera();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }

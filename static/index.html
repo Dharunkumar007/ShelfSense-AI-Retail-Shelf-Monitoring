@@ -11,19 +11,19 @@
     <a class="brand" href="/" aria-label="ShelfSense AI home"><img src="/static/shelfsense-logo.jpeg" width="204" height="61" alt="ShelfSense AI - Out of stock is out of the question."></a>
     <span class="nav-section-label">RETAIL WORKSPACE</span>
     <nav aria-label="Main navigation">
-      <button data-page="dashboard" data-title="Store overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
-      <button data-page="monitor" data-title="Live monitor"><i data-lucide="scan-line"></i><span>Monitor</span></button>
-      <button data-page="analysis" data-title="Shelf analysis"><i data-lucide="chart-no-axes-combined"></i><span>Analysis</span></button>
-      <button data-page="alerts" data-title="Restock operations"><i data-lucide="list-checks"></i><span>Restock</span><b id="navAlertCount" class="nav-count">0</b></button>
+      <button data-page="dashboard" data-title="Dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
+      <button data-page="monitor" data-title="Live Monitor"><i data-lucide="scan-line"></i><span>Monitor</span></button>
+      <button data-page="analysis" data-title="Shelf Analysis"><i data-lucide="chart-no-axes-combined"></i><span>Analysis</span></button>
+      <button data-page="alerts" data-title="Stock Management"><i data-lucide="list-checks"></i><span>Restock</span><b id="navAlertCount" class="nav-count">0</b></button>
       <button data-page="inventory" data-title="Inventory & layout"><i data-lucide="boxes"></i><span>Inventory</span></button>
-      <button data-page="reports" data-title="History & reports"><i data-lucide="chart-column"></i><span>Reports</span></button>
-      <button data-page="admin" data-title="Workspace settings"><i data-lucide="settings-2"></i><span>Admin</span></button>
+      <button data-page="reports" data-title="Historical Yield & Analytics"><i data-lucide="chart-column"></i><span>Reports</span></button>
+      <button data-page="admin" data-title="System Infrastructure"><i data-lucide="settings-2"></i><span>Admin</span></button>
     </nav>
     <div class="sidebar-status"><span id="healthDot" class="status-dot"></span><div><strong id="healthLabel">Connecting</strong><small id="modelStatusSide">Checking model</small></div></div>
     <button id="accountButton" class="account-button" title="Account"><i data-lucide="user-round"></i><span id="accountLabel">Account</span><i data-lucide="log-out"></i></button>
   </aside>
   <main>
-    <header class="topbar"><div class="page-heading"><img class="mobile-logo" src="/static/shelfsense-logo.jpeg" width="204" height="61" alt="ShelfSense AI"><span class="eyebrow">ShelfSense AI <span class="heading-divider">/</span> Intelligence workspace</span><h1 id="pageTitle">Store overview</h1><p id="pageDescription">Shelf availability, evidence, and action.</p></div>
+    <header class="topbar"><div class="page-heading"><img class="mobile-logo" src="/static/shelfsense-logo.jpeg" width="204" height="61" alt="ShelfSense AI"><span class="eyebrow">ShelfSense AI <span class="heading-divider">/</span> Intelligence workspace</span><h1 id="pageTitle">Store overview</h1></div>
       <div class="actions"><label id="chooseImage" class="button button-secondary file-picker ripple-button"><i data-lucide="image-up"></i><span>Choose image</span><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="scanButton" class="button button-primary" disabled><i data-lucide="scan-line"></i><span>Run scan</span></button><button id="themeToggle" class="icon-button theme-toggle" type="button" title="Switch to light theme" aria-label="Switch to light theme" aria-pressed="true"><i data-lucide="sun"></i></button></div>
     </header>
     <div id="scrollProgress" class="scroll-progress" role="progressbar" aria-label="Page scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span><output id="scrollValue">0%</output></div>
