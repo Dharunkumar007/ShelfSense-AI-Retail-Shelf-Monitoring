@@ -1,151 +1,99 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ShelfSense AI</title>
-    <link rel="manifest" href="/static/manifest.json" />
-    <link rel="stylesheet" href="/static/styles.css" />
-  </head>
-  <body>
-    <aside class="sidebar">
-      <div class="brand">
-        <span class="brand-mark">S</span>
-        <div>
-          <strong>ShelfSense AI</strong>
-          <small>Retail Shelf Monitor</small>
-        </div>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102f29"><title>ShelfSense | Retail Operations</title>
+  <link rel="manifest" href="/static/manifest.json"><link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">S</span><div><strong>ShelfSense</strong><small>Retail operations</small></div></div>
+    <nav aria-label="Main navigation">
+      <button data-page="dashboard" data-title="Store overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+      <button data-page="monitor" data-title="Live monitor"><i data-lucide="scan-line"></i><span>Monitor</span></button>
+      <button data-page="analysis" data-title="Shelf analysis"><i data-lucide="chart-no-axes-combined"></i><span>Analysis</span></button>
+      <button data-page="alerts" data-title="Restock operations"><i data-lucide="list-checks"></i><span>Restock</span><b id="navAlertCount" class="nav-count">0</b></button>
+      <button data-page="inventory" data-title="Inventory & layout"><i data-lucide="boxes"></i><span>Inventory</span></button>
+      <button data-page="reports" data-title="History & reports"><i data-lucide="chart-column"></i><span>Reports</span></button>
+      <button data-page="admin" data-title="Workspace settings"><i data-lucide="settings-2"></i><span>Admin</span></button>
+    </nav>
+    <div class="sidebar-status"><span id="healthDot" class="status-dot"></span><div><strong id="healthLabel">Connecting</strong><small id="modelStatusSide">Checking model</small></div></div>
+    <button id="accountButton" class="account-button" title="Account"><i data-lucide="user-round"></i><span id="accountLabel">Account</span><i data-lucide="log-out"></i></button>
+  </aside>
+  <main>
+    <header class="topbar"><div class="page-heading"><span class="eyebrow">ShelfSense / Operations</span><h1 id="pageTitle">Store overview</h1><p id="pageDescription">Shelf availability, evidence, and action.</p></div>
+      <div class="actions"><label class="button button-secondary file-picker"><i data-lucide="image-up"></i><span>Choose image</span><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="scanButton" class="button button-primary" disabled><i data-lucide="scan-line"></i><span>Run scan</span></button></div>
+    </header>
+    <div class="workspace-bar"><label>Source <select id="sourceFilter"><option value="upload">Uploaded images</option><option value="browser">Browser camera</option></select></label><span id="sourceContext">Current workspace</span><button id="refreshButton" class="icon-button" title="Refresh data" aria-label="Refresh data"><i data-lucide="refresh-cw"></i></button></div>
+    <div id="scanNotice" class="scan-notice" role="status" aria-live="polite"><i data-lucide="image"></i><span id="fileName">No image selected</span><b id="scanState">Ready</b></div>
+
+    <section id="dashboardView" class="view active" aria-label="Overview">
+      <div class="metric-grid">
+        <article class="metric metric-featured"><div class="metric-icon"><i data-lucide="gauge"></i></div><div><span>Shelf occupancy</span><strong id="occupancyValue">--</strong><small id="lastScanTime">Awaiting scan</small></div></article>
+        <article class="metric"><div class="metric-icon teal"><i data-lucide="package-check"></i></div><div><span>Visible items</span><strong id="detectedValue">--</strong><small id="expectedValue">No scan yet</small></div></article>
+        <article class="metric"><div class="metric-icon amber"><i data-lucide="triangle-alert"></i></div><div><span>Stock gaps</span><strong id="gapValue">--</strong><small id="alertValue">Awaiting scan</small></div></article>
+        <article class="metric"><div class="metric-icon coral"><i data-lucide="activity"></i></div><div><span>Shelf health</span><strong id="statusBadge">--</strong><small id="changeValue">No comparable previous scan</small></div></article>
       </div>
-      <nav>
-        <button data-page="dashboard" class="active">Overview</button>
-        <button data-page="monitor">Live Monitor</button>
-        <button data-page="analysis">Shelf Analysis</button>
-        <button data-page="alerts">Alerts</button>
-        <button data-page="admin">Admin</button>
-      </nav>
-    </aside>
+      <div class="overview-grid">
+        <section class="panel"><div class="panel-title"><div><span class="section-kicker">Visual inspection</span><h2>Latest shelf scan</h2></div><button data-go="monitor" class="icon-button" title="Open monitor" aria-label="Open monitor"><i data-lucide="maximize-2"></i></button></div><div id="monitorShelf" class="shelf-wrap empty-visual"><span>No scan available</span></div><div id="overviewQuality" class="quality-strip">Awaiting image quality checks</div></section>
+        <section class="panel chart-panel"><div class="panel-title"><div><span class="section-kicker">Current image</span><h2>Availability by zone</h2></div><span id="chartAverage" class="compact-stat">--</span></div><div id="trendBars" class="zone-bars" aria-label="Stock occupancy by zone"></div><div class="visual-legend"><span><i class="key-dot good-bg"></i>Healthy</span><span><i class="key-dot warn-bg"></i>Low</span><span><i class="key-dot danger-bg"></i>Critical</span></div></section>
+      </div>
+      <div class="lower-grid"><section class="panel"><div class="panel-title"><div><span class="section-kicker">Next actions</span><h2>Priority restocks</h2></div><button data-go="alerts" class="text-button">All tasks <i data-lucide="arrow-right"></i></button></div><div id="priorityList"></div></section><section class="panel"><div class="panel-title"><div><span class="section-kicker">Activity</span><h2>Recent scans</h2></div><button data-go="reports" class="text-button">History <i data-lucide="arrow-right"></i></button></div><div id="historyList"></div></section></div>
+    </section>
 
-    <main>
-      <header class="topbar">
-        <div>
-          <h1>AI Shelf Monitoring</h1>
-          <p>Camera input, YOLO-ready detection, planogram comparison, and restock alerts.</p>
-        </div>
-        <div class="actions">
-          <label class="file-picker">
-            <input id="fileInput" type="file" accept="image/*" />
-            Upload Image
-          </label>
-          <button id="scanButton">Scan Shelf</button>
-          <button id="monitorButton" class="dark">Open Monitor</button>
-        </div>
-      </header>
+    <section id="monitorView" class="view" aria-label="Monitor">
+      <div class="toolbar"><label>Camera <select id="cameraSelect"><option value="browser">Browser camera</option></select></label><label>Interval <select id="captureInterval"><option value="5">5 seconds</option><option value="10" selected>10 seconds</option><option value="30">30 seconds</option></select></label><button id="startCamera" class="button button-primary"><i data-lucide="video"></i>Start</button><button id="stopCamera" class="icon-button" title="Stop camera" aria-label="Stop camera" disabled><i data-lucide="square"></i></button><span id="cameraStatus" role="status">Stopped</span></div>
+      <div class="monitor-layout"><section class="panel camera-panel"><div class="panel-title"><h2>Inspection workspace</h2><span id="monitorMode" class="model-chip">No scan</span></div>
+        <video id="cameraVideo" playsinline muted hidden></video><div id="analysisShelf" class="shelf-wrap empty-visual"><span>No scan available</span></div>
+        <div class="toolbar overlay-controls"><label><input id="showBoxes" type="checkbox" checked> Detections</label><label><input id="showZones" type="checkbox" checked> Zones</label><label><input id="showHeatmap" type="checkbox"> Heatmap</label><label>Class <select id="classFilter"><option value="">All classes</option></select></label></div><div id="selectedZone" class="quality-strip" role="status">No zone selected</div>
+      </section><aside class="panel"><div class="panel-title"><h2>Detection tuning</h2><button id="resetTuning" class="icon-button" title="Reset tuning" aria-label="Reset tuning"><i data-lucide="rotate-ccw"></i></button></div>
+        <form id="tuningForm" class="control-form">
+          <label>Confidence <output id="confidenceOutput">25%</output><input name="confidence" type="range" min="0.05" max="0.95" step="0.05" value="0.25"></label>
+          <label>Overlap suppression (IoU) <output id="iouOutput">70%</output><input name="iou" type="range" min="0.1" max="0.9" step="0.05" value="0.7"></label>
+          <label>Inference resolution<select name="image_size"><option value="640">640 px / Standard</option><option value="960">960 px / Detailed</option><option value="1280">1280 px / Dense shelves</option></select></label>
+          <label>Detection limit<input name="max_detections" type="number" min="10" max="1500" value="500" required></label>
+          <label>Minimum box area (%)<input name="min_area" type="number" min="0" max="5" step="0.01" value="0" required></label>
+          <label class="check-label"><input name="contrast" type="checkbox"> Contrast enhancement</label>
+        </form><div id="tuningState" class="quality-strip">Defaults selected</div><div id="qualityPanel" class="quality-panel"></div>
+      </aside></div>
+    </section>
 
-      <section id="dashboardView" class="view active">
-        <div class="metric-grid">
-          <article class="metric">
-            <span>Occupancy</span>
-            <strong id="occupancyValue">0%</strong>
-          </article>
-          <article class="metric">
-            <span>Detected Items</span>
-            <strong id="detectedValue">0</strong>
-          </article>
-          <article class="metric">
-            <span>Active Alerts</span>
-            <strong id="alertValue">0</strong>
-          </article>
-          <article class="metric">
-            <span>Shelf Status</span>
-            <strong id="statusBadge" class="badge">Ready</strong>
-          </article>
-        </div>
-        <div class="content-grid">
-          <section class="panel wide">
-            <div class="panel-title">
-              <h2>Store Monitor</h2>
-              <span>Camera Aisle 3</span>
-            </div>
-            <div id="monitorShelf" class="shelf-wrap"></div>
-          </section>
-          <section class="panel">
-            <div class="panel-title">
-              <h2>Stock Trend</h2>
-              <span>Last scans</span>
-            </div>
-            <div id="trendBars" class="bars"></div>
-          </section>
-        </div>
-      </section>
+    <section id="analysisView" class="view" aria-label="Analysis">
+      <div class="analysis-summary"><article><span>Expected</span><strong id="analysisExpected">--</strong></article><article><span>Matched to zones</span><strong id="analysisDetected">--</strong></article><article><span>Unassigned</span><strong id="analysisUnassigned">--</strong></article><article><span>Mean confidence</span><strong id="analysisConfidence">--</strong></article></div>
+      <div class="toolbar"><label>Zone search<input id="zoneSearch" type="search" placeholder="Name or ID"></label><label>Status<select id="zoneStatus"><option value="">All statuses</option><option>Critical</option><option>Low Stock</option><option>Full Stock</option></select></label></div>
+      <section class="panel analysis-table-panel"><div class="table-wrap"><table><thead><tr><th>Zone</th><th>Detected</th><th>Expected</th><th>Missing</th><th>Availability</th><th>Status</th></tr></thead><tbody id="zoneTable"></tbody></table></div></section>
+      <section class="panel comparison-section"><div class="panel-title"><h2>Scan comparison</h2></div><div class="toolbar"><label>Before<select id="compareBefore"></select></label><label>After<select id="compareAfter"></select></label><button id="compareButton" class="button button-secondary"><i data-lucide="git-compare"></i>Compare</button></div><p id="comparisonSummary" role="status">Choose two saved scans.</p><div class="compare-grid"><figure><div id="beforeImage" class="shelf-wrap empty-visual"></div><figcaption id="beforeCaption">Before</figcaption></figure><figure><div id="afterImage" class="shelf-wrap empty-visual"></div><figcaption id="afterCaption">After</figcaption></figure></div></section>
+    </section>
 
-      <section id="monitorView" class="view">
-        <section class="monitor-screen">
-          <div class="camera-frame">
-            <div id="uploadPreview" class="upload-preview">
-              <div id="imageLayer"></div>
-              <div id="analysisShelf" class="shelf-wrap"></div>
-            </div>
-          </div>
-          <aside class="monitor-feed">
-            <h2>Live Monitor</h2>
-            <p>Use this screen during prototype demo to show the app-style shelf monitor.</p>
-            <div class="zone-list stack"></div>
-          </aside>
-        </section>
-      </section>
+    <section id="alertsView" class="view" aria-label="Restock tasks">
+      <div class="toolbar"><label>Severity<select id="taskSeverity"><option value="">All priorities</option><option>Critical</option><option>Low Stock</option></select></label><label>Assignee<input id="taskAssignee" type="search" placeholder="Search people"></label><span id="taskSummary"></span></div>
+      <div id="taskBoard" class="task-board"></div>
+      <section class="panel"><div class="panel-title"><h2>Activity timeline</h2><span class="table-hint">Latest 100 events</span></div><ol id="eventTimeline" class="timeline"></ol></section>
+    </section>
 
-      <section id="analysisView" class="view">
-        <section class="panel">
-          <div class="panel-title">
-            <h2>Shelf Analysis</h2>
-            <span>Planogram comparison</span>
-          </div>
-          <div class="zone-list stack"></div>
-        </section>
-      </section>
+    <section id="inventoryView" class="view" aria-label="Inventory">
+      <div class="toolbar"><label>Product / zone<input id="inventorySearch" type="search" placeholder="Search catalog"></label><button id="addZone" class="button button-secondary admin-only"><i data-lucide="plus"></i>Add zone</button><button id="saveLayout" class="button button-primary admin-only"><i data-lucide="save"></i>Save layout</button></div>
+      <div class="quality-strip">SKU assignments are configured references. Detected classes come from the active model.</div>
+      <div class="table-wrap"><table><thead><tr><th>Zone / name</th><th>Assigned SKU / product</th><th>Expected</th><th>Critical / low (%)</th><th>Bounds (%) L / T / R / B</th><th></th></tr></thead><tbody id="inventoryTable"></tbody></table></div><p id="layoutMessage" role="status"></p>
+    </section>
 
-      <section id="alertsView" class="view">
-        <section class="panel">
-          <div class="panel-title">
-            <h2>Alerts Center</h2>
-            <span>Restock priority</span>
-          </div>
-          <div id="alertList" class="stack"></div>
-        </section>
-      </section>
+    <section id="reportsView" class="view" aria-label="Reports">
+      <div class="toolbar"><label>Period<select id="reportDays"><option value="1">Today / last 24h</option><option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option><option value="365">Last year</option></select></label><label>File search<input id="historySearch" type="search" placeholder="Image filename"></label><label>Health<select id="historyStatus"><option value="">All statuses</option><option>Healthy</option><option>Low</option><option>Critical</option></select></label><button id="exportButton" class="button button-secondary manager-only"><i data-lucide="download"></i>Export CSV</button><button id="printButton" class="icon-button" title="Print report / Save PDF" aria-label="Print report"><i data-lucide="printer"></i></button></div>
+      <div id="reportSummary" class="report-summary"></div>
+      <section class="panel"><div class="panel-title"><h2>Availability over time</h2><span class="table-hint">Latest 100 scans; layout changes marked</span></div><div id="historyChart" class="history-chart"></div></section>
+      <div class="table-wrap"><table><thead><tr><th>Scan</th><th>Captured</th><th>Availability</th><th>Health</th><th>Alerts</th><th></th></tr></thead><tbody id="historyTable"></tbody></table></div><button id="moreHistory" class="button button-secondary">Load more</button>
+    </section>
 
-      <section id="adminView" class="view">
-        <section class="admin-grid">
-          <article class="panel">
-            <h2>Product Catalog</h2>
-            <input value="Cereal" />
-            <input value="Juice" />
-            <input value="Snacks" />
-          </article>
-          <article class="panel">
-            <h2>Threshold Rules</h2>
-            <label>Low stock below <input value="75%" /></label>
-            <label>Critical below <input value="45%" /></label>
-          </article>
-          <article class="panel">
-            <h2>Camera Zones</h2>
-            <input value="Aisle 3 Monitor" />
-            <input value="Aisle 5 Monitor" />
-            <input value="Entrance Shelf" />
-          </article>
-          <article class="panel">
-            <h2>Auto-Calibrate Layout</h2>
-            <p style="color:var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-              Upload a fully stocked reference image to establish the ground-truth baseline.
-            </p>
-            <input type="file" id="calibrateInput" accept="image/*" style="background: transparent; border: none; padding: 0; margin-bottom: 1rem;" />
-            <button class="btn" id="calibrateBtn" style="width: 100%;">Generate Planogram</button>
-            <span id="calibrateStatus" style="display: block; margin-top: 1rem; font-size: 0.85rem; color: var(--accent-blue);"></span>
-          </article>
-        </section>
-      </section>
-    </main>
-
-    <script src="/static/app.js"></script>
-  </body>
+    <section id="adminView" class="view" aria-label="Admin">
+      <div class="admin-intro"><div><h2>Workspace configuration</h2><p id="storageStatus">Checking storage</p></div><span id="roleLabel" class="model-chip"></span></div>
+      <div class="admin-grid"><section class="panel"><div class="panel-title"><h2>Model & processing</h2></div><div id="modelDetails" class="setting-list"></div><div id="classCatalog" class="setting-list"></div></section>
+      <section class="panel"><div class="panel-title"><h2>Camera connections</h2></div><div id="cameraList" class="setting-list"></div></section></div>
+      <section class="panel admin-only"><div class="panel-title"><h2>Team access</h2></div><form id="userForm" class="toolbar"><label>Username<input name="username" required maxlength="80" autocomplete="off"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label><label>Role<select name="role"><option value="staff">Staff</option><option value="manager">Manager</option><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label><button class="button button-primary" type="submit"><i data-lucide="user-plus"></i>Create user</button></form><div id="usersList" class="setting-list"></div></section>
+    </section>
+  </main>
+  <dialog id="loginDialog"><form id="loginForm" class="control-form"><div class="brand-mark">S</div><h2>Sign in to ShelfSense</h2><label>Username<input name="username" required autocomplete="username"></label><label>Password<input name="password" type="password" required autocomplete="current-password"></label><button class="button button-primary">Sign in</button><p id="loginError" role="alert"></p></form></dialog>
+  <dialog id="taskDialog"><form id="taskForm" class="control-form"><div class="panel-title"><h2 id="taskTitle">Update restock</h2><button id="closeTask" type="button" class="icon-button" title="Close" aria-label="Close"><i data-lucide="x"></i></button></div><input name="id" type="hidden"><label>Status<select name="state"><option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option></select></label><label>Assignee<input name="assignee" maxlength="80" list="teamNames"></label><datalist id="teamNames"></datalist><label>Completion note<textarea name="note" maxlength="500" rows="3"></textarea></label><button type="submit" class="button button-primary"><i data-lucide="save"></i>Save task</button><p id="taskError" role="alert"></p></form></dialog>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script><script src="/static/app.js"></script>
+</body>
 </html>

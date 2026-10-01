@@ -27,11 +27,11 @@ http://127.0.0.1:8000
 
 ## Deploy
 
-This project is ready for Vercel deployment. Import the GitHub repository in Vercel, keep the framework preset as Other, and deploy. More details are in `docs/DEPLOYMENT.md`.
+Deployment requires persistent storage and a host that can run the YOLO dependencies. See [deployment instructions](docs/DEPLOYMENT.md) and [operations setup](docs/OPERATIONS.md) before publishing.
 
 ## Current Prototype
 
-The app uses mock AI detections when no trained model is present. After training, place the model at:
+The app requires a trained model; missing weights return an explicit error. After training, place the model at:
 
 ```text
 models/best.pt

@@ -1,77 +1,114 @@
-"""YOLOv8 detector integration for ShelfSense AI."""
+"""Bounded, serialized YOLO inference with recorded per-scan settings."""
+from __future__ import annotations
 
-import json
+import hashlib
+import io
+import threading
+from collections import OrderedDict
 from pathlib import Path
-from typing import Any
+from typing import Literal
 
 import cv2
 import numpy as np
-from ultralytics import YOLO
+from PIL import Image, ImageOps, UnidentifiedImageError
+from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "models" / "best.pt"
-PLANOGRAM_PATH = ROOT / "sample_data" / "planogram.json"
+LOCK = threading.Lock()
+_model = None
+_signature = None
+_model_digest = None
+_cache: OrderedDict = OrderedDict()
 
 
-def yolo_model_available() -> bool:
-    return MODEL_PATH.exists()
+class Tuning(BaseModel):
+    confidence: float = Field(default=0.25, ge=0.05, le=0.95)
+    iou: float = Field(default=0.7, ge=0.1, le=0.9)
+    image_size: Literal[640, 960, 1280] = 640
+    max_detections: int = Field(default=500, ge=10, le=1500)
+    min_area: float = Field(default=0, ge=0, le=5)
+    contrast: bool = False
 
 
-def _zone_for_box(box: list[float], zones: list[dict[str, Any]]) -> str:
-    x1, y1, x2, y2 = box
-    center_x = (x1 + x2) / 2
-    center_y = (y1 + y2) / 2
-
-    for zone in zones:
-        zx1, zy1, zx2, zy2 = zone["bbox"]
-        if zx1 <= center_x <= zx2 and zy1 <= center_y <= zy2:
-            return zone["id"]
-
-    return "unknown"
+def yolo_model_available():
+    return MODEL_PATH.is_file()
 
 
-def detect_products(image_bytes: bytes, content_type: str | None = None) -> list[dict[str, Any]]:
-    """Run YOLOv8 detection and return percentage-based bounding boxes."""
+def prepare_image(raw):
+    try:
+        with Image.open(io.BytesIO(raw)) as source:
+            if source.width * source.height > 24_000_000:
+                raise ValueError("Image exceeds 24 megapixels. Resize it before uploading.")
+            source = ImageOps.exif_transpose(source).convert("RGB")
+            source.thumbnail((1920, 1920))
+            image = cv2.cvtColor(np.asarray(source), cv2.COLOR_RGB2BGR)
+            output = io.BytesIO()
+            source.save(output, "JPEG", quality=88)
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        raise ValueError("Upload a valid JPEG, PNG, or WebP image.") from exc
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    sharpness = round(float(cv2.Laplacian(gray, cv2.CV_64F).var()), 1)
+    brightness = round(float(gray.mean()), 1)
+    warnings = []
+    if sharpness < 60:
+        warnings.append("Image may be blurred; verify counts or recapture.")
+    if brightness < 45 or brightness > 220:
+        warnings.append("Exposure may affect detection; check lighting.")
+    return image, output.getvalue(), {"sharpness": sharpness, "brightness": brightness,
+        "warnings": warnings, "width": image.shape[1], "height": image.shape[0]}
+
+
+def _zone_for_box(box, zones):
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    # Smallest enclosing zone wins when a legacy layout overlaps.
+    candidates = [z for z in zones if z["bbox"][0] <= cx <= z["bbox"][2]
+                  and z["bbox"][1] <= cy <= z["bbox"][3]]
+    if not candidates:
+        return "unknown"
+    return min(candidates, key=lambda z: ((z["bbox"][2] - z["bbox"][0]) *
+                                         (z["bbox"][3] - z["bbox"][1]), z["id"]))["id"]
+
+
+def infer(image, zones, tuning):
+    global _model, _signature, _model_digest
     if not yolo_model_available():
-        raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
-
-    with PLANOGRAM_PATH.open("r", encoding="utf-8") as handle:
-        zones = json.load(handle)["zones"]
-
-    # Decode image directly from memory (fixes Windows file lock issues)
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    if img is None:
-        print("Failed to decode image bytes!")
-        return []
-
-    # Pass the numpy array directly to YOLO
-    model = YOLO(str(MODEL_PATH))
-    results = model.predict(source=img, conf=0.25, verbose=False)
-
-    detections: list[dict[str, Any]] = []
-    for result in results:
-        height, width = result.orig_shape
-        names = result.names
-        for index, box in enumerate(result.boxes):
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            # Convert bounding boxes to percentages (0 to 100)
-            pct_box = [
-                round((x1 / width) * 100, 2),
-                round((y1 / height) * 100, 2),
-                round((x2 / width) * 100, 2),
-                round((y2 / height) * 100, 2),
-            ]
-            class_id = int(box.cls[0].item())
-            detections.append(
-                {
-                    "id": f"yolo-{index}",
-                    "label": names.get(class_id, "product"),
-                    "confidence": round(float(box.conf[0].item()), 2),
-                    "bbox": pct_box,
-                    "zone_id": _zone_for_box(pct_box, zones),
-                }
-            )
-
-    return detections
+        raise FileNotFoundError("Trained model missing. Place best.pt in models/ and restart.")
+    stat = MODEL_PATH.stat()
+    signature = (stat.st_mtime_ns, stat.st_size)
+    key = (hashlib.sha256(image.tobytes()).hexdigest(), tuning.model_dump_json(), signature)
+    with LOCK:
+        if _signature != signature:
+            from ultralytics import YOLO
+            _model = YOLO(str(MODEL_PATH))
+            with MODEL_PATH.open("rb") as handle:
+                digest = hashlib.sha256()
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            _model_digest = digest.hexdigest()
+            _signature = signature
+            _cache.clear()
+        cached = key in _cache
+        if cached:
+            boxes = _cache.pop(key)
+        else:
+            feed = image
+            if tuning.contrast:
+                lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+                lab[:, :, 0] = cv2.createCLAHE(clipLimit=2, tileGridSize=(8, 8)).apply(lab[:, :, 0])
+                feed = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+            result = _model.predict(feed, conf=tuning.confidence, iou=tuning.iou,
+                imgsz=tuning.image_size, max_det=tuning.max_detections, augment=False, verbose=False)[0]
+            boxes = []
+            for index, row in enumerate(result.boxes.data.cpu().tolist()):
+                x1, y1, x2, y2, confidence, cls = row[:6]
+                h, w = image.shape[:2]
+                bbox = [round(x1/w*100, 3), round(y1/h*100, 3), round(x2/w*100, 3), round(y2/h*100, 3)]
+                if (bbox[2]-bbox[0]) * (bbox[3]-bbox[1]) / 100 < tuning.min_area:
+                    continue
+                boxes.append({"id": f"yolo-{index}", "label": result.names[int(cls)],
+                              "confidence": round(confidence, 4), "bbox": bbox})
+        _cache[key] = boxes
+        while len(_cache) > 8:
+            _cache.popitem(last=False)
+        return [{**b, "zone_id": _zone_for_box(b["bbox"], zones)} for b in boxes], cached, _model_digest

@@ -2,6 +2,13 @@
 __pycache__/
 *.pyc
 shelfsense.db
+*.db-wal
+*.db-shm
+.env
+.pytest_cache/
+test-results/
+validation_results/
+.vscode/browse.vc.db*
 data/
 training_data/
 *.pyc
