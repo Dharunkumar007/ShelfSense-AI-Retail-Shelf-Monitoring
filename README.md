@@ -2,6 +2,8 @@
 
 AI-powered retail shelf monitoring system using a YOLOv8-ready detection workflow, shelf planogram comparison, occupancy scoring, alerts, analytics, and an app-style live monitor.
 
+**New computer? Start with [Setup and Launch](docs/SETUP_AND_LAUNCH.md).** It includes Windows and Ubuntu commands, downloads, a smaller CPU-only install, administrator setup, and troubleshooting. The trained `models/best.pt` is included; a dataset download is only needed for training.
+
 ## Project Modules
 
 - Product Detection Engine: accepts shelf images and returns product bounding boxes.
@@ -37,10 +39,9 @@ The app requires a trained model; missing weights return an explicit error. Afte
 models/best.pt
 ```
 
-Then install YOLO runtime packages and run the app:
+The runtime packages are included in `requirements.txt`. Run the app:
 
 ```bash
-.venv/bin/python -m pip install ultralytics opencv-python
 .venv/bin/python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 

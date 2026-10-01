@@ -2,6 +2,8 @@
 
 Use this guide if Kaggle is not working. Train on any laptop with good internet. A GPU is better, but CPU also works slowly for a small demo dataset.
 
+To run the existing model without training, use [Setup and Launch](SETUP_AND_LAUNCH.md). The model is already included in the repository.
+
 ## 1. Clone Project
 
 ```bash
@@ -133,7 +135,6 @@ Windows PowerShell:
 
 ```powershell
 .\.venv\Scripts\python -m pip install -r requirements.txt
-.\.venv\Scripts\python -m pip install ultralytics opencv-python
 .\.venv\Scripts\python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -141,7 +142,6 @@ Ubuntu/Linux:
 
 ```bash
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python -m pip install ultralytics opencv-python
 .venv/bin/python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -151,7 +151,7 @@ Open:
 http://127.0.0.1:8000
 ```
 
-Upload a shelf image. If `models/best.pt` exists, the app uses real YOLOv8 detection. If the model is missing, it uses mock detection for demo.
+Upload a shelf image. The app uses real YOLOv8 detection from `models/best.pt`. A missing model produces an error; there is no mock-detection fallback.
 
 ## Faster Or Better Training
 
