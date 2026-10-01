@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#102f29"><title>ShelfSense | Retail Operations</title>
+  <meta name="theme-color" content="#0a0a0a"><title>ShelfSense AI | Retail Operations</title>
+  <script src="/static/appearance.js"></script>
   <link rel="manifest" href="/static/manifest.json"><link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <aside class="sidebar">
-    <div class="brand"><span class="brand-mark">S</span><div><strong>ShelfSense</strong><small>Retail operations</small></div></div>
+    <a class="brand" href="/" aria-label="ShelfSense AI home"><img src="/static/shelfsense-logo.jpeg" width="618" height="185" alt="ShelfSense AI - Out of stock is out of the question."></a>
     <nav aria-label="Main navigation">
       <button data-page="dashboard" data-title="Store overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
       <button data-page="monitor" data-title="Live monitor"><i data-lucide="scan-line"></i><span>Monitor</span></button>
@@ -21,11 +22,12 @@
     <button id="accountButton" class="account-button" title="Account"><i data-lucide="user-round"></i><span id="accountLabel">Account</span><i data-lucide="log-out"></i></button>
   </aside>
   <main>
-    <header class="topbar"><div class="page-heading"><span class="eyebrow">ShelfSense / Operations</span><h1 id="pageTitle">Store overview</h1><p id="pageDescription">Shelf availability, evidence, and action.</p></div>
-      <div class="actions"><label class="button button-secondary file-picker"><i data-lucide="image-up"></i><span>Choose image</span><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="scanButton" class="button button-primary" disabled><i data-lucide="scan-line"></i><span>Run scan</span></button></div>
+    <header class="topbar"><div class="page-heading"><img class="mobile-logo" src="/static/shelfsense-logo.jpeg" width="618" height="185" alt="ShelfSense AI"><span class="eyebrow">ShelfSense AI / Operations</span><h1 id="pageTitle">Store overview</h1><p id="pageDescription">Shelf availability, evidence, and action.</p></div>
+      <div class="actions"><label id="chooseImage" class="button button-secondary file-picker ripple-button"><i data-lucide="image-up"></i><span>Choose image</span><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="scanButton" class="button button-primary" disabled><i data-lucide="scan-line"></i><span>Run scan</span></button><button id="themeToggle" class="icon-button theme-toggle" type="button" title="Switch to light theme" aria-label="Switch to light theme" aria-pressed="true"><i data-lucide="sun"></i></button></div>
     </header>
+    <div id="scrollProgress" class="scroll-progress" role="progressbar" aria-label="Page scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
     <div class="workspace-bar"><label>Source <select id="sourceFilter"><option value="upload">Uploaded images</option><option value="browser">Browser camera</option></select></label><span id="sourceContext">Current workspace</span><button id="refreshButton" class="icon-button" title="Refresh data" aria-label="Refresh data"><i data-lucide="refresh-cw"></i></button></div>
-    <div id="scanNotice" class="scan-notice" role="status" aria-live="polite"><i data-lucide="image"></i><span id="fileName">No image selected</span><b id="scanState">Ready</b></div>
+    <div id="scanNotice" class="scan-notice" role="status" aria-live="polite"><span id="noticeIcon" class="alert-icon"><i data-lucide="info"></i></span><span id="fileName">No image selected</span><b id="scanState">Ready</b></div>
 
     <section id="dashboardView" class="view active" aria-label="Overview">
       <div class="metric-grid">
@@ -90,9 +92,11 @@
       <section class="panel"><div class="panel-title"><h2>Camera connections</h2></div><div id="cameraList" class="setting-list"></div></section></div>
       <section class="panel admin-only"><div class="panel-title"><h2>Team access</h2></div><form id="userForm" class="toolbar"><label>Username<input name="username" required maxlength="80" autocomplete="off"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="256" autocomplete="new-password"></label><label>Role<select name="role"><option value="staff">Staff</option><option value="manager">Manager</option><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label><button class="button button-primary" type="submit"><i data-lucide="user-plus"></i>Create user</button></form><div id="usersList" class="setting-list"></div></section>
     </section>
+    <footer class="workspace-footer"><span>ShelfSense AI <span class="footer-divider">/</span> Retail operations</span><div><a href="/static/terms.html">Terms of Service</a><a href="/static/privacy.html">Privacy Policy</a></div></footer>
   </main>
-  <dialog id="loginDialog"><form id="loginForm" class="control-form"><div class="brand-mark">S</div><h2>Sign in to ShelfSense</h2><label>Username<input name="username" required autocomplete="username"></label><label>Password<input name="password" type="password" required autocomplete="current-password"></label><button class="button button-primary">Sign in</button><p id="loginError" role="alert"></p></form></dialog>
+  <dialog id="loginDialog"><form id="loginForm" class="control-form"><img class="login-logo" src="/static/shelfsense-logo.jpeg" width="618" height="185" alt="ShelfSense AI"><h2>Sign in to ShelfSense</h2><label>Username<input name="username" required autocomplete="username"></label><label>Password<input name="password" type="password" required autocomplete="current-password"></label><button class="button button-primary">Sign in</button><p id="loginError" role="alert"></p></form></dialog>
   <dialog id="taskDialog"><form id="taskForm" class="control-form"><div class="panel-title"><h2 id="taskTitle">Update restock</h2><button id="closeTask" type="button" class="icon-button" title="Close" aria-label="Close"><i data-lucide="x"></i></button></div><input name="id" type="hidden"><label>Status<select name="state"><option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option></select></label><label>Assignee<input name="assignee" maxlength="80" list="teamNames"></label><datalist id="teamNames"></datalist><label>Completion note<textarea name="note" maxlength="500" rows="3"></textarea></label><button type="submit" class="button button-primary"><i data-lucide="save"></i>Save task</button><p id="taskError" role="alert"></p></form></dialog>
+  <div id="productTooltip" class="product-tooltip" role="tooltip" hidden></div>
   <div id="toast" role="status" aria-live="polite" hidden></div>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script><script src="/static/app.js"></script>
 </body>

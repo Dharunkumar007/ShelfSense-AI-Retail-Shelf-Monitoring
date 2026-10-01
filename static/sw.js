@@ -1,5 +1,5 @@
-const CACHE_NAME = "shelfsense-v3";
-const APP_SHELL = ["/", "/static/styles.css", "/static/app.js", "/static/manifest.json"];
+const CACHE_NAME = "shelfsense-v4";
+const APP_SHELL = ["/", "/static/styles.css", "/static/app.js", "/static/appearance.js", "/static/shelfsense-logo.jpeg", "/static/manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

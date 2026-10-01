@@ -1,5 +1,7 @@
 # ShelfSense UI Content Plan
 
+Historical proposal. Several items listed below as later additions are now implemented. See [Implementation Status](IMPLEMENTATION_STATUS.md) for the current delivered scope and remaining work.
+
 This document separates the sections already implemented from useful additions for a later production phase.
 
 ## Overview

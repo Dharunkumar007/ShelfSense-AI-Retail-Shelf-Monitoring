@@ -39,6 +39,21 @@ def main():
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(base)
                 page.wait_for_function("document.querySelector('#sourceContext').textContent.includes('Connected')")
+                assert page.locator("#monitorShelf img").count() == 0
+                assert page.locator("#occupancyValue").inner_text() == "--"
+                assert page.locator("html").get_attribute("data-theme") == "dark"
+                assert page.locator(".brand img").evaluate("img => img.complete && img.naturalWidth === 618")
+                page.screenshot(path="/tmp/shelfsense-v4-empty-dark.png", full_page=True)
+                page.locator("#themeToggle").click()
+                page.wait_for_function("document.documentElement.dataset.theme === 'light' && !document.querySelector('#themeToggle').disabled")
+                page.reload()
+                page.wait_for_function("document.querySelector('#sourceContext').textContent.includes('Connected')")
+                assert page.locator("html").get_attribute("data-theme") == "light"
+                page.screenshot(path="/tmp/shelfsense-v4-empty-light.png", full_page=True)
+                page.locator("#themeToggle").click()
+                page.wait_for_function("!document.querySelector('#themeToggle').disabled")
+                page.locator("#chooseImage").dispatch_event("pointerdown", {"clientX":1100,"clientY":60})
+                assert page.locator(".ripple").count() == 1
                 page.locator("#fileInput").set_input_files(str(ROOT / "test_1005.jpg"))
                 with page.expect_response(lambda r: r.url.endswith("/api/analyze") and r.request.method == "POST", timeout=120000) as pending:
                     page.locator("#scanButton").click()
@@ -47,6 +62,32 @@ def main():
                 page.wait_for_function("document.querySelector('#scanState').textContent==='Complete'")
                 assert first["trend"] == [z["occupancy"] for z in first["zones"]]
                 page.screenshot(path="/tmp/shelfsense-v3-overview.png", full_page=True)
+                page.locator('[data-page="monitor"]').click()
+                # Verify actual pointer hit-testing with zones still enabled.
+                hit = page.locator("#analysisShelf .product-box").evaluate_all("""boxes => boxes.findIndex(b => {
+                    const r = b.getBoundingClientRect();
+                    return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2) === b;
+                })""")
+                assert hit >= 0
+                product = page.locator("#analysisShelf .product-box").nth(hit)
+                product.hover()
+                assert "% confidence" in page.locator("#productTooltip").inner_text()
+                assert not page.locator("#productTooltip").is_hidden()
+                product.focus()
+                assert product.get_attribute("aria-describedby") == "productTooltip"
+                page.screenshot(path="/tmp/shelfsense-v4-product-hover.png", full_page=True)
+                page.keyboard.press("Escape")
+                assert page.locator("#productTooltip").is_hidden()
+                page.reload()
+                page.wait_for_function("document.querySelector('#sourceContext').textContent.includes('Connected')")
+                assert page.locator("#monitorShelf img").count() == 0
+                assert page.locator("#analysisShelf img").count() == 0
+                assert page.locator("#occupancyValue").inner_text() == "--"
+                assert page.locator("#historyList [data-scan]").count() == 1
+                page.locator("#refreshButton").click()
+                assert page.locator("#monitorShelf img").count() == 0
+                page.locator("#historyList [data-scan]").first.click()
+                page.locator("#monitorShelf img").wait_for(state="attached")
                 page.locator('[data-page="monitor"]').click()
                 page.locator('[name="confidence"]').fill("0.9")
                 page.locator("#fileInput").set_input_files(str(ROOT / "test_1008.jpg"))
@@ -102,16 +143,35 @@ def main():
                 page.locator('#loginForm button').click()
                 page.wait_for_function("!document.querySelector('#loginDialog').open")
                 page.wait_for_function("document.querySelector('#accountLabel').textContent.includes('browser-admin')")
+                for theme in ["light", "dark"]:
+                    if page.locator("html").get_attribute("data-theme") != theme:
+                        page.locator("#themeToggle").click()
+                        page.wait_for_function("!document.querySelector('#themeToggle').disabled")
+                    page.locator('[data-page="dashboard"]').click()
+                    page.screenshot(path=f"/tmp/shelfsense-v4-{theme}-desktop.png",full_page=True)
+                page.evaluate("window.scrollTo(0,document.documentElement.scrollHeight)")
+                page.wait_for_function("document.querySelector('#scrollProgress').getAttribute('aria-valuenow') === '100'")
                 for width in [390,360,768,1440]:
                     page.set_viewport_size({"width":width,"height":844 if width<800 else 1000})
                     for section in ["dashboard","monitor","analysis","alerts","inventory","reports","admin"]:
                         page.locator(f'[data-page="{section}"]').click()
                         overflow = page.evaluate("document.documentElement.scrollWidth > innerWidth + 1")
                         assert not overflow, (width,section)
+                        if width < 800:
+                            assert page.locator(f'[data-page="{section}"] span').first.evaluate("""el => {
+                                const r=el.getBoundingClientRect(), n=el.closest('nav').getBoundingClientRect();
+                                return r.top>=n.top && r.bottom<=n.bottom && r.bottom<=innerHeight;
+                            }"""), (width,section,"clipped navigation label")
                     if width == 390:
                         page.locator('[data-page="dashboard"]').click()
                         page.screenshot(path="/tmp/shelfsense-v3-mobile.png",full_page=True)
                 assert not errors, errors
+                page.emulate_media(reduced_motion="reduce")
+                page.locator("#themeToggle").click()
+                assert page.locator("html").get_attribute("data-theme") == "light"
+                for path in ["privacy", "terms"]:
+                    page.goto(f"{base}/static/{path}.html")
+                    assert page.locator("h1").inner_text() in ["Privacy Policy", "Terms of Service"]
                 for name in ["overview","monitor","mobile"]:
                     with Image.open(f"/tmp/shelfsense-v3-{name}.png") as im:
                         assert max(ImageStat.Stat(im.convert("RGB")).stddev)>15

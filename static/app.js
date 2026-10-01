@@ -13,7 +13,10 @@ const descriptions = { dashboard: "Shelf availability, evidence, and action.", m
   inventory: "Expected facings, product assignments, and shelf zones.", reports: "Availability history and operational reports.", admin: "People, camera connections, and system status." };
 function notice(message, type = "") {
   $("#fileName").textContent = message;
+  if (!type && ["Complete", "Saved scan"].includes($("#scanState").textContent)) type = "success";
   $("#scanNotice").className = `scan-notice ${type}`;
+  $("#noticeIcon").innerHTML = `<i data-lucide="${({error:"circle-alert", loading:"loader-circle", success:"circle-check"})[type] || "info"}"></i>`;
+  icons();
 }
 let toastTimer;
 function toast(message) {
@@ -33,6 +36,7 @@ async function api(path, options = {}) {
 }
 const jsonRequest = (method, data) => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
 function setPage(page) {
+  hideProductTooltip();
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `${page}View`));
   $$("[data-page]").forEach((b) => { b.classList.toggle("active", b.dataset.page === page); b.setAttribute("aria-current", b.dataset.page === page ? "page" : "false"); });
   $("#pageTitle").textContent = $(`[data-page="${page}"]`).dataset.title;
@@ -52,7 +56,8 @@ function tuningChanged() {
   $("#tuningState").textContent = "Pending settings / next scan";
 }
 function renderShelf(target, analysis, interactive = false) {
-  if (!analysis?.image) { target.innerHTML = empty("No saved image"); target.className = "shelf-wrap empty-visual"; return; }
+  hideProductTooltip();
+  if (!analysis?.image) { target.innerHTML = '<div class="inspection-empty"><i data-lucide="scan-line"></i><strong>No image selected</strong><span>Awaiting inspection</span></div>'; target.className = "shelf-wrap empty-visual"; target.style.removeProperty("aspect-ratio"); icons(); return; }
   const ratio = `${analysis.quality.width} / ${analysis.quality.height}`;
   target.className = "shelf-wrap has-scan"; target.style.aspectRatio = ratio;
   const boxes = $("#showBoxes").checked;
@@ -61,14 +66,42 @@ function renderShelf(target, analysis, interactive = false) {
   const filter = $("#classFilter").value;
   const style = (b) => `left:${b[0]}%;top:${b[1]}%;width:${b[2]-b[0]}%;height:${b[3]-b[1]}%`;
   target.innerHTML = `<img class="scan-image" src="${escapeHtml(analysis.image)}" alt="Shelf scan ${analysis.id}" loading="lazy">` +
-    (zones || heat ? analysis.zones.map((z) => `<button type="button" class="zone-overlay ${level(z.status)} ${heat ? "heat" : ""}" style="${style(z.bbox)}" data-zone="${escapeHtml(z.id)}" title="${escapeHtml(z.name)}: ${z.occupancy}%" aria-label="${escapeHtml(z.name)}: ${z.occupancy}% available">${escapeHtml(z.id)}</button>`).join("") : "") +
-    (boxes ? analysis.detections.filter((b) => !filter || b.label === filter).map((b) => `<div class="product-box" style="${style(b.bbox)}"><span class="box-tooltip">${escapeHtml(b.label)} / ${Math.round(b.confidence*100)}%</span></div>`).join("") : "");
+    (zones || heat ? analysis.zones.map((z) => `<button type="button" class="zone-overlay ${level(z.status)} ${heat ? "heat" : ""}" style="${style(z.bbox)}" data-zone="${escapeHtml(z.id)}" aria-label="${escapeHtml(z.name)}: ${z.occupancy}% available"><span class="zone-label">${escapeHtml(z.id)}</span></button>`).join("") : "") +
+    (boxes ? analysis.detections.filter((b) => !filter || b.label === filter).map((b) => `<button type="button" class="product-box" style="${style(b.bbox)}" data-confidence="${(b.confidence*100).toFixed(1)}" data-product="${escapeHtml(b.label)}" aria-label="${escapeHtml(b.label)}: ${(b.confidence*100).toFixed(1)}% detection confidence"></button>`).join("") : "");
+  target.querySelectorAll(".product-box").forEach((box) => {
+    box.addEventListener("pointerenter", () => showProductTooltip(box));
+    box.addEventListener("focus", () => showProductTooltip(box));
+    box.addEventListener("click", () => showProductTooltip(box));
+    box.addEventListener("pointerleave", hideProductTooltip);
+    box.addEventListener("blur", hideProductTooltip);
+  });
   if (interactive) target.querySelectorAll("[data-zone]").forEach((button) => button.addEventListener("click", () => {
     const z = analysis.zones.find((item) => item.id === button.dataset.zone);
     $("#selectedZone").textContent = `${z.name}: ${z.detected_count} / ${z.expected_count} items, ${z.missing_count} missing, ${z.status}`;
     target.querySelectorAll(".zone-overlay").forEach((b) => b.classList.toggle("selected", b === button));
   }));
 }
+function hideProductTooltip() {
+  $("#productTooltip").hidden = true;
+  document.querySelectorAll('.product-box[aria-describedby]').forEach((box) => box.removeAttribute("aria-describedby"));
+}
+function showProductTooltip(box) {
+  const tooltip = $("#productTooltip");
+  tooltip.textContent = `${box.dataset.product} / ${box.dataset.confidence}% confidence`;
+  box.setAttribute("aria-describedby", "productTooltip");
+  tooltip.hidden = false;
+  const rect = box.getBoundingClientRect(), size = tooltip.getBoundingClientRect();
+  tooltip.style.left = `${Math.max(8, Math.min(innerWidth-size.width-8, rect.left+rect.width/2-size.width/2))}px`;
+  tooltip.style.top = `${Math.max(8, Math.min(innerHeight-size.height-8, rect.top-size.height-8 > 8 ? rect.top-size.height-8 : rect.bottom+8))}px`;
+}
+function repositionProductTooltip() {
+  const focused = document.activeElement;
+  if (focused?.classList.contains("product-box")) showProductTooltip(focused);
+  else hideProductTooltip();
+}
+window.addEventListener("scroll", repositionProductTooltip, {passive:true});
+window.addEventListener("resize", repositionProductTooltip);
+document.addEventListener("keydown", (e) => { if(e.key === "Escape") hideProductTooltip(); });
 function renderAnalysis(analysis) {
   state.analysis = analysis;
   const detections = analysis.detections;
@@ -169,7 +202,9 @@ async function refreshData(loadLatest = false) {
 function clearAnalysis() {
   state.analysis = null;
   for (const id of ["occupancyValue", "detectedValue", "gapValue", "statusBadge", "analysisExpected", "analysisDetected", "analysisUnassigned", "analysisConfidence"]) $(`#${id}`).textContent = "--";
-  $("#trendBars").innerHTML = empty("No scans for this source"); $("#chartAverage").textContent = "--";
+  $("#trendBars").innerHTML = empty("Awaiting inspection"); $("#chartAverage").textContent = "--";
+  $("#changeValue").textContent = "No scan selected";
+  $("#statusBadge").className = "status-text";
   $("#lastScanTime").textContent = "Awaiting scan"; $("#expectedValue").textContent = "No scan yet"; $("#alertValue").textContent = "Awaiting scan";
   renderShelf($("#monitorShelf"), null); renderShelf($("#analysisShelf"), null); renderZoneTable();
   $("#qualityPanel").innerHTML = ""; $("#overviewQuality").textContent = "Awaiting image checks";
@@ -244,7 +279,7 @@ async function startCamera() {
       $("#cameraVideo").srcObject = state.stream; $("#cameraVideo").hidden = false;
       await $("#cameraVideo").play();
     }
-    state.source = camera; $("#sourceFilter").value = camera; await refreshData(true);
+    state.source = camera; $("#sourceFilter").value = camera; clearAnalysis(); await refreshData(false);
     state.cameraRunning = true; $("#stopCamera").disabled = false; $("#startCamera").disabled = true;
     $("#cameraSelect").disabled = true; $("#cameraStatus").textContent = "Capturing";
     await captureFrame();
@@ -281,7 +316,7 @@ async function boot() {
     $$(".manager-only").forEach((el) => { el.hidden = !["admin","manager"].includes(state.user.role); });
     $("#startCamera").disabled = state.user.role === "viewer";
     $("#fileInput").disabled = state.user.role === "viewer";
-    await loadAdmin(); await refreshData(true);
+    await loadAdmin(); await refreshData(false);
     $("#sourceContext").textContent = "Connected / " + (state.user.local ? "Local workspace" : state.user.username);
     icons();
   } catch (error) { notice(error.message,"error"); $("#healthLabel").textContent = "Access unavailable"; }
@@ -290,9 +325,9 @@ async function boot() {
 $$("[data-page]").forEach((b) => b.addEventListener("click", () => setPage(b.dataset.page)));
 $$("[data-go]").forEach((b) => b.addEventListener("click", () => setPage(b.dataset.go)));
 $("#scanButton").addEventListener("click", () => analyze(state.selectedFile));
-$("#fileInput").addEventListener("change", () => { stopCamera(); state.source="upload"; $("#sourceFilter").value="upload"; state.selectedFile = $("#fileInput").files[0] || null; $("#scanButton").disabled = !state.selectedFile || state.scanning; notice(state.selectedFile?.name || "No image selected"); });
-$("#refreshButton").addEventListener("click", () => refreshData(true));
-$("#sourceFilter").addEventListener("change", () => { stopCamera(); state.source = $("#sourceFilter").value; clearAnalysis(); refreshData(true); });
+$("#fileInput").addEventListener("change", () => { stopCamera(); clearAnalysis(); state.source="upload"; $("#sourceFilter").value="upload"; state.selectedFile = $("#fileInput").files[0] || null; $("#scanState").textContent="Ready"; $("#scanButton").disabled = !state.selectedFile || state.scanning; notice(state.selectedFile?.name || "No image selected"); refreshData(false); });
+$("#refreshButton").addEventListener("click", () => refreshData(false));
+$("#sourceFilter").addEventListener("change", () => { stopCamera(); state.source = $("#sourceFilter").value; clearAnalysis(); refreshData(false); });
 $("#tuningForm").addEventListener("input", tuningChanged);
 $("#tuningForm").addEventListener("submit", (e) => e.preventDefault());
 $("#resetTuning").addEventListener("click", () => { $("#tuningForm").reset(); tuningChanged(); });
@@ -329,4 +364,4 @@ $("#accountButton").addEventListener("click",async()=>{if(state.user?.local){set
 window.addEventListener("offline",()=>{stopCamera(); notice("Offline / saved dashboard only. Reconnect to scan or update tasks.","error"); $("#healthLabel").textContent="Offline";});
 window.addEventListener("online",()=>boot());
 if("serviceWorker" in navigator) navigator.serviceWorker.register("/static/sw.js").catch(()=>{});
-setPage("dashboard"); icons(); boot();
+clearAnalysis(); setPage("dashboard"); icons(); boot();

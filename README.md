@@ -4,6 +4,8 @@ AI-powered retail shelf monitoring system using a YOLOv8-ready detection workflo
 
 **New computer? Start with [Setup and Launch](docs/SETUP_AND_LAUNCH.md).** It includes Windows and Ubuntu commands, downloads, a smaller CPU-only install, administrator setup, and troubleshooting. The trained `models/best.pt` is included; a dataset download is only needed for training.
 
+See [Implementation Status](docs/IMPLEMENTATION_STATUS.md) for completed features and deployment/accuracy work still pending. The inspection workspace starts empty; existing scans remain in History. The logo, light/dark themes, and product-confidence tooltips are shared by the website and PWA.
+
 ## Project Modules
 
 - Product Detection Engine: accepts shelf images and returns product bounding boxes.
