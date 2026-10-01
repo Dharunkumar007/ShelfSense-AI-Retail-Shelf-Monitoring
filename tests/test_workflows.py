@@ -180,3 +180,12 @@ def test_image_resize_and_quality():
 
 def test_removed_calibration_endpoint(client):
     assert client.post("/api/calibrate").status_code == 404
+
+
+def test_frontend_cache_headers_and_versioned_assets(client):
+    root = client.get("/")
+    assert root.headers["cache-control"] == "no-store"
+    assert 'styles.css?v=20261001-6' in root.text
+    assert 'app.js?v=20261001-6' in root.text
+    assert client.get("/sw.js").headers["cache-control"] == "no-store"
+    assert "must-revalidate" in client.get("/static/styles.css?v=20261001-6").headers["cache-control"]

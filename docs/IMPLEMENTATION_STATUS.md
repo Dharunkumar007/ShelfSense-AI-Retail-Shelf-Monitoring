@@ -12,6 +12,8 @@ Updated 1 October 2026. Implemented does not mean verified for production deploy
 - Shelf layout editing, thresholds, accounts, role permissions, session login, local-only initial setup.
 - Empty current inspection on page load, even when history exists. Saved records open only through an explicit selection. This does not delete history, tasks, or inventory configuration.
 - Product confidence tooltip on hover, keyboard focus, or tap. Zone overlays no longer block product interaction. Confidence is distinct from zone availability.
+- Original/Detections reveal slider beneath the Monitor image. Zones are off by default; identifiers stay in the zone table instead of image labels.
+- Versioned frontend assets, revalidation headers, and a root-scoped service worker prevent old cached CSS/JavaScript from mixing with new HTML. An upgrade regression test loads legacy assets into a real browser before reloading the new release.
 - Original user-supplied logo, blue/neutral palette, dark/light themes, saved theme preference, square reveal transition, scroll progress, upload-button ripple, semantic status alerts, reduced-motion handling.
 - Project Terms of Service and Privacy Policy pages; these need operator-specific review before commercial publication.
 
@@ -20,6 +22,8 @@ Updated 1 October 2026. Implemented does not mean verified for production deploy
 The frontend is plain HTML/CSS/JavaScript. The requested [Magic UI theme](https://magicui.design/docs/components/animated-theme-toggler), [scroll progress](https://magicui.design/docs/components/scroll-progress), and [ripple](https://magicui.design/docs/components/ripple-button) interactions are implemented natively. React imports and registry aliases cannot run directly in this stack. No React, Tailwind, or npm build step was introduced. Alerts follow the icon, semantic color, and message pattern shown by [daisyUI](https://daisyui.com/components/alert/); daisyUI is not installed.
 
 The View Transitions API provides the square theme reveal. Unsupported browsers and reduced-motion preferences use an immediate theme switch. System fonts and tabular numerals avoid an external font download. The supplied logo is retained without image editing.
+
+Frontend releases must update the asset version in `index.html`, the policy pages, and `sw.js` together. Browser verification checks computed theme colors, not only the theme attribute or icon. Run `python tests/browser_cache_upgrade.py` to exercise cached-client upgrades; it uses a temporary database and the installed Chrome browser.
 
 ## Still Requires Target-System Verification
 

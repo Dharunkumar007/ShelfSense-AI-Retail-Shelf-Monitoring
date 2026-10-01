@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0a0a0a"><title>ShelfSense AI | Retail Operations</title>
-  <script src="/static/appearance.js"></script>
-  <link rel="manifest" href="/static/manifest.json"><link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/appearance.js?v=20261001-6"></script>
+  <link rel="manifest" href="/static/manifest.json?v=20261001-6"><link rel="stylesheet" href="/static/styles.css?v=20261001-6">
 </head>
 <body>
   <aside class="sidebar">
-    <a class="brand" href="/" aria-label="ShelfSense AI home"><img src="/static/shelfsense-logo.jpeg" width="618" height="185" alt="ShelfSense AI - Out of stock is out of the question."></a>
+    <a class="brand" href="/" aria-label="ShelfSense AI home"><img src="/static/shelfsense-logo.jpeg" width="204" height="61" alt="ShelfSense AI - Out of stock is out of the question."></a>
+    <span class="nav-section-label">RETAIL WORKSPACE</span>
     <nav aria-label="Main navigation">
       <button data-page="dashboard" data-title="Store overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
       <button data-page="monitor" data-title="Live monitor"><i data-lucide="scan-line"></i><span>Monitor</span></button>
@@ -22,10 +23,10 @@
     <button id="accountButton" class="account-button" title="Account"><i data-lucide="user-round"></i><span id="accountLabel">Account</span><i data-lucide="log-out"></i></button>
   </aside>
   <main>
-    <header class="topbar"><div class="page-heading"><img class="mobile-logo" src="/static/shelfsense-logo.jpeg" width="618" height="185" alt="ShelfSense AI"><span class="eyebrow">ShelfSense AI / Operations</span><h1 id="pageTitle">Store overview</h1><p id="pageDescription">Shelf availability, evidence, and action.</p></div>
+    <header class="topbar"><div class="page-heading"><img class="mobile-logo" src="/static/shelfsense-logo.jpeg" width="204" height="61" alt="ShelfSense AI"><span class="eyebrow">ShelfSense AI <span class="heading-divider">/</span> Intelligence workspace</span><h1 id="pageTitle">Store overview</h1><p id="pageDescription">Shelf availability, evidence, and action.</p></div>
       <div class="actions"><label id="chooseImage" class="button button-secondary file-picker ripple-button"><i data-lucide="image-up"></i><span>Choose image</span><input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp"></label><button id="scanButton" class="button button-primary" disabled><i data-lucide="scan-line"></i><span>Run scan</span></button><button id="themeToggle" class="icon-button theme-toggle" type="button" title="Switch to light theme" aria-label="Switch to light theme" aria-pressed="true"><i data-lucide="sun"></i></button></div>
     </header>
-    <div id="scrollProgress" class="scroll-progress" role="progressbar" aria-label="Page scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+    <div id="scrollProgress" class="scroll-progress" role="progressbar" aria-label="Page scroll progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span><output id="scrollValue">0%</output></div>
     <div class="workspace-bar"><label>Source <select id="sourceFilter"><option value="upload">Uploaded images</option><option value="browser">Browser camera</option></select></label><span id="sourceContext">Current workspace</span><button id="refreshButton" class="icon-button" title="Refresh data" aria-label="Refresh data"><i data-lucide="refresh-cw"></i></button></div>
     <div id="scanNotice" class="scan-notice" role="status" aria-live="polite"><span id="noticeIcon" class="alert-icon"><i data-lucide="info"></i></span><span id="fileName">No image selected</span><b id="scanState">Ready</b></div>
 
@@ -47,7 +48,8 @@
       <div class="toolbar"><label>Camera <select id="cameraSelect"><option value="browser">Browser camera</option></select></label><label>Interval <select id="captureInterval"><option value="5">5 seconds</option><option value="10" selected>10 seconds</option><option value="30">30 seconds</option></select></label><button id="startCamera" class="button button-primary"><i data-lucide="video"></i>Start</button><button id="stopCamera" class="icon-button" title="Stop camera" aria-label="Stop camera" disabled><i data-lucide="square"></i></button><span id="cameraStatus" role="status">Stopped</span></div>
       <div class="monitor-layout"><section class="panel camera-panel"><div class="panel-title"><h2>Inspection workspace</h2><span id="monitorMode" class="model-chip">No scan</span></div>
         <video id="cameraVideo" playsinline muted hidden></video><div id="analysisShelf" class="shelf-wrap empty-visual"><span>No scan available</span></div>
-        <div class="toolbar overlay-controls"><label><input id="showBoxes" type="checkbox" checked> Detections</label><label><input id="showZones" type="checkbox" checked> Zones</label><label><input id="showHeatmap" type="checkbox"> Heatmap</label><label>Class <select id="classFilter"><option value="">All classes</option></select></label></div><div id="selectedZone" class="quality-strip" role="status">No zone selected</div>
+        <div class="inspection-slider"><div><label for="overlayReveal">Original / Detections</label><output id="overlayRevealValue" for="overlayReveal">100%</output></div><input id="overlayReveal" type="range" min="0" max="100" value="100" disabled aria-label="Detection overlay reveal"><div class="slider-endpoints"><span>Original image</span><span>Detection overlay</span></div></div>
+        <div class="toolbar overlay-controls"><label><input id="showBoxes" type="checkbox" checked> Detections</label><label><input id="showZones" type="checkbox"> Zones</label><label><input id="showHeatmap" type="checkbox"> Heatmap</label><label>Class <select id="classFilter"><option value="">All classes</option></select></label></div><div id="selectedZone" class="quality-strip" role="status">No product selected</div>
       </section><aside class="panel"><div class="panel-title"><h2>Detection tuning</h2><button id="resetTuning" class="icon-button" title="Reset tuning" aria-label="Reset tuning"><i data-lucide="rotate-ccw"></i></button></div>
         <form id="tuningForm" class="control-form">
           <label>Confidence <output id="confidenceOutput">25%</output><input name="confidence" type="range" min="0.05" max="0.95" step="0.05" value="0.25"></label>
@@ -98,6 +100,6 @@
   <dialog id="taskDialog"><form id="taskForm" class="control-form"><div class="panel-title"><h2 id="taskTitle">Update restock</h2><button id="closeTask" type="button" class="icon-button" title="Close" aria-label="Close"><i data-lucide="x"></i></button></div><input name="id" type="hidden"><label>Status<select name="state"><option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option></select></label><label>Assignee<input name="assignee" maxlength="80" list="teamNames"></label><datalist id="teamNames"></datalist><label>Completion note<textarea name="note" maxlength="500" rows="3"></textarea></label><button type="submit" class="button button-primary"><i data-lucide="save"></i>Save task</button><p id="taskError" role="alert"></p></form></dialog>
   <div id="productTooltip" class="product-tooltip" role="tooltip" hidden></div>
   <div id="toast" role="status" aria-live="polite" hidden></div>
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script><script src="/static/app.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script><script src="/static/app.js?v=20261001-6"></script>
 </body>
 </html>

@@ -33,10 +33,12 @@
       try {
         const transition = document.startViewTransition(apply);
         await transition.ready;
-        await root.animate({clipPath:[
+        const animation = root.animate({clipPath:[
           `polygon(${x}px ${y}px,${x}px ${y}px,${x}px ${y}px,${x}px ${y}px)`,
           `polygon(${x-radius}px ${y-radius}px,${x+radius}px ${y-radius}px,${x+radius}px ${y+radius}px,${x-radius}px ${y+radius}px)`
-        ]}, {duration:450, easing:"ease-in-out", pseudoElement:"::view-transition-new(root)", fill:"both"}).finished;
+        ]}, {duration:450, easing:"ease-in-out", pseudoElement:"::view-transition-new(root)"});
+        await animation.finished;
+        animation.cancel();
         await transition.finished;
       } catch (_) { syncTheme(); }
       finally { toggle.disabled = false; }
@@ -72,6 +74,7 @@
       progress.style.left = `${rect.left}px`; progress.style.width = `${rect.width}px`;
       progress.firstElementChild.style.transform = `scaleX(${value})`;
       progress.setAttribute("aria-valuenow", String(Math.round(value*100)));
+      document.querySelector("#scrollValue").textContent = `${Math.round(value*100)}%`;
     };
     const schedule = () => { if (!scheduled) { scheduled=true; requestAnimationFrame(update); } };
     addEventListener("scroll",schedule,{passive:true}); addEventListener("resize",schedule);

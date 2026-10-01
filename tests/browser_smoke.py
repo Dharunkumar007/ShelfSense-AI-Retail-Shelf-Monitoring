@@ -44,8 +44,10 @@ def main():
                 assert page.locator("html").get_attribute("data-theme") == "dark"
                 assert page.locator(".brand img").evaluate("img => img.complete && img.naturalWidth === 618")
                 page.screenshot(path="/tmp/shelfsense-v4-empty-dark.png", full_page=True)
+                dark_background = page.evaluate("getComputedStyle(document.body).backgroundColor")
                 page.locator("#themeToggle").click()
                 page.wait_for_function("document.documentElement.dataset.theme === 'light' && !document.querySelector('#themeToggle').disabled")
+                assert page.evaluate("getComputedStyle(document.body).backgroundColor") != dark_background
                 page.reload()
                 page.wait_for_function("document.querySelector('#sourceContext').textContent.includes('Connected')")
                 assert page.locator("html").get_attribute("data-theme") == "light"
@@ -63,6 +65,7 @@ def main():
                 assert first["trend"] == [z["occupancy"] for z in first["zones"]]
                 page.screenshot(path="/tmp/shelfsense-v3-overview.png", full_page=True)
                 page.locator('[data-page="monitor"]').click()
+                page.locator("#showZones").check()
                 # Verify actual pointer hit-testing with zones still enabled.
                 hit = page.locator("#analysisShelf .product-box").evaluate_all("""boxes => boxes.findIndex(b => {
                     const r = b.getBoundingClientRect();
@@ -75,6 +78,14 @@ def main():
                 assert not page.locator("#productTooltip").is_hidden()
                 product.focus()
                 assert product.get_attribute("aria-describedby") == "productTooltip"
+                page.locator("#overlayReveal").fill("0")
+                assert page.locator("#analysisShelf .detection-layer").evaluate("el => getComputedStyle(el).clipPath") == "inset(0px 100% 0px 0px)"
+                page.locator("#overlayReveal").fill("50")
+                assert page.locator("#overlayRevealValue").inner_text() == "50%"
+                page.evaluate("window.scrollTo({top:0,behavior:'instant'})")
+                page.screenshot(path="/tmp/shelfsense-v6-slider.png", full_page=True)
+                page.locator("#overlayReveal").fill("100")
+                product.focus()
                 page.screenshot(path="/tmp/shelfsense-v4-product-hover.png", full_page=True)
                 page.keyboard.press("Escape")
                 assert page.locator("#productTooltip").is_hidden()
@@ -151,12 +162,15 @@ def main():
                     page.screenshot(path=f"/tmp/shelfsense-v4-{theme}-desktop.png",full_page=True)
                 page.evaluate("window.scrollTo(0,document.documentElement.scrollHeight)")
                 page.wait_for_function("document.querySelector('#scrollProgress').getAttribute('aria-valuenow') === '100'")
-                for width in [390,360,768,1440]:
+                for width in [390,360,768,1440,1920]:
                     page.set_viewport_size({"width":width,"height":844 if width<800 else 1000})
                     for section in ["dashboard","monitor","analysis","alerts","inventory","reports","admin"]:
                         page.locator(f'[data-page="{section}"]').click()
                         overflow = page.evaluate("document.documentElement.scrollWidth > innerWidth + 1")
                         assert not overflow, (width,section)
+                        if width > 800:
+                            assert page.locator(".brand img").evaluate("el => el.getBoundingClientRect().right <= document.querySelector('.sidebar').getBoundingClientRect().right")
+                            assert not page.locator(".mobile-logo").is_visible()
                         if width < 800:
                             assert page.locator(f'[data-page="{section}"] span').first.evaluate("""el => {
                                 const r=el.getBoundingClientRect(), n=el.closest('nav').getBoundingClientRect();
@@ -175,7 +189,7 @@ def main():
                 for name in ["overview","monitor","mobile"]:
                     with Image.open(f"/tmp/shelfsense-v3-{name}.png") as im:
                         assert max(ImageStat.Stat(im.convert("RGB")).stddev)>15
-                print(json.dumps({"first_trend":first["trend"],"second_trend":second["trend"],"first_ms":first["inference_ms"],"second_ms":second["inference_ms"],"viewports":[360,390,768,1440],"js_errors":errors}))
+                print(json.dumps({"first_trend":first["trend"],"second_trend":second["trend"],"first_ms":first["inference_ms"],"second_ms":second["inference_ms"],"viewports":[360,390,768,1440,1920],"js_errors":errors}))
                 browser.close()
         finally:
             server.terminate()

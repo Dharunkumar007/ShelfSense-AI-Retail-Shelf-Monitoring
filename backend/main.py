@@ -52,6 +52,10 @@ async def protect_origin(request, call_next):
     response = await call_next(request)
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"
+    elif request.url.path in ("/", "/sw.js") or request.url.path.endswith(".html"):
+        response.headers["Cache-Control"] = "no-store"
+    elif request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     return response
@@ -176,6 +180,11 @@ def process_scan(raw, source, camera, tuning, actor):
 @app.get("/")
 def index():
     return FileResponse(ROOT / "static/index.html")
+
+
+@app.get("/sw.js")
+def service_worker():
+    return FileResponse(ROOT / "static/sw.js", media_type="application/javascript")
 
 
 @app.get("/api/health")

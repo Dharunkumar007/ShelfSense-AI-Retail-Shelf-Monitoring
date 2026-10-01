@@ -65,9 +65,10 @@ function renderShelf(target, analysis, interactive = false) {
   const heat = $("#showHeatmap").checked;
   const filter = $("#classFilter").value;
   const style = (b) => `left:${b[0]}%;top:${b[1]}%;width:${b[2]-b[0]}%;height:${b[3]-b[1]}%`;
-  target.innerHTML = `<img class="scan-image" src="${escapeHtml(analysis.image)}" alt="Shelf scan ${analysis.id}" loading="lazy">` +
+  target.innerHTML = `<img class="scan-image" src="${escapeHtml(analysis.image)}" alt="Shelf scan ${analysis.id}" loading="lazy"><div class="detection-layer">` +
     (zones || heat ? analysis.zones.map((z) => `<button type="button" class="zone-overlay ${level(z.status)} ${heat ? "heat" : ""}" style="${style(z.bbox)}" data-zone="${escapeHtml(z.id)}" aria-label="${escapeHtml(z.name)}: ${z.occupancy}% available"><span class="zone-label">${escapeHtml(z.id)}</span></button>`).join("") : "") +
-    (boxes ? analysis.detections.filter((b) => !filter || b.label === filter).map((b) => `<button type="button" class="product-box" style="${style(b.bbox)}" data-confidence="${(b.confidence*100).toFixed(1)}" data-product="${escapeHtml(b.label)}" aria-label="${escapeHtml(b.label)}: ${(b.confidence*100).toFixed(1)}% detection confidence"></button>`).join("") : "");
+    (boxes ? analysis.detections.filter((b) => !filter || b.label === filter).map((b) => `<button type="button" class="product-box" style="${style(b.bbox)}" data-confidence="${(b.confidence*100).toFixed(1)}" data-product="${escapeHtml(b.label)}" aria-label="${escapeHtml(b.label)}: ${(b.confidence*100).toFixed(1)}% detection confidence"></button>`).join("") : "") + '</div>';
+  if (interactive) target.querySelector(".detection-layer").style.clipPath = `inset(0 ${100-Number($("#overlayReveal").value)}% 0 0)`;
   target.querySelectorAll(".product-box").forEach((box) => {
     box.addEventListener("pointerenter", () => showProductTooltip(box));
     box.addEventListener("focus", () => showProductTooltip(box));
@@ -88,6 +89,7 @@ function hideProductTooltip() {
 function showProductTooltip(box) {
   const tooltip = $("#productTooltip");
   tooltip.textContent = `${box.dataset.product} / ${box.dataset.confidence}% confidence`;
+  if (box.closest("#analysisShelf")) $("#selectedZone").textContent = tooltip.textContent;
   box.setAttribute("aria-describedby", "productTooltip");
   tooltip.hidden = false;
   const rect = box.getBoundingClientRect(), size = tooltip.getBoundingClientRect();
@@ -104,6 +106,7 @@ window.addEventListener("resize", repositionProductTooltip);
 document.addEventListener("keydown", (e) => { if(e.key === "Escape") hideProductTooltip(); });
 function renderAnalysis(analysis) {
   state.analysis = analysis;
+  $("#overlayReveal").disabled = false;
   const detections = analysis.detections;
   const confidence = detections.length ? detections.reduce((s, d) => s+d.confidence, 0)/detections.length : null;
   $("#occupancyValue").textContent = `${analysis.occupancy}%`;
@@ -168,7 +171,7 @@ function historyQuery() {
   return new URLSearchParams({camera: state.source, days: $("#reportDays").value,
     search: $("#historySearch").value, status: $("#historyStatus").value});
 }
-async function refreshData(loadLatest = false) {
+async function refreshData() {
   const requestId = ++state.refresh;
   const camera = encodeURIComponent(state.source);
   try {
@@ -190,10 +193,6 @@ async function refreshData(loadLatest = false) {
       $("#compareBefore").selectedIndex = 1;
     }
     $("#compareButton").disabled = recent.history.length < 2;
-    if (loadLatest) {
-      if (recent.history.length) { const a = await api(`/api/scans/${recent.history[0].id}`); if (requestId === state.refresh) renderAnalysis(a); }
-      else clearAnalysis();
-    }
     const previous = recent.history.find((h) => h.id < state.analysis?.id && h.baseline === state.analysis?.baseline);
     $("#changeValue").textContent = previous ? `${(state.analysis.occupancy - previous.occupancy).toFixed(1)} pp vs scan #${previous.id}` : "No comparable previous scan";
     icons();
@@ -201,6 +200,9 @@ async function refreshData(loadLatest = false) {
 }
 function clearAnalysis() {
   state.analysis = null;
+  $("#overlayReveal").value = "100";
+  $("#overlayReveal").disabled = true;
+  $("#overlayRevealValue").textContent = "100%";
   for (const id of ["occupancyValue", "detectedValue", "gapValue", "statusBadge", "analysisExpected", "analysisDetected", "analysisUnassigned", "analysisConfidence"]) $(`#${id}`).textContent = "--";
   $("#trendBars").innerHTML = empty("Awaiting inspection"); $("#chartAverage").textContent = "--";
   $("#changeValue").textContent = "No scan selected";
@@ -208,7 +210,7 @@ function clearAnalysis() {
   $("#lastScanTime").textContent = "Awaiting scan"; $("#expectedValue").textContent = "No scan yet"; $("#alertValue").textContent = "Awaiting scan";
   renderShelf($("#monitorShelf"), null); renderShelf($("#analysisShelf"), null); renderZoneTable();
   $("#qualityPanel").innerHTML = ""; $("#overviewQuality").textContent = "Awaiting image checks";
-  $("#monitorMode").textContent = "No scan"; $("#selectedZone").textContent = "No zone selected";
+  $("#monitorMode").textContent = "No scan"; $("#selectedZone").textContent = "No product selected";
   $("#classFilter").innerHTML = '<option value="">All classes</option>';
   $("#comparisonSummary").textContent = "Choose two saved scans.";
   renderShelf($("#beforeImage"), null); renderShelf($("#afterImage"), null);
@@ -329,6 +331,13 @@ $("#fileInput").addEventListener("change", () => { stopCamera(); clearAnalysis()
 $("#refreshButton").addEventListener("click", () => refreshData(false));
 $("#sourceFilter").addEventListener("change", () => { stopCamera(); state.source = $("#sourceFilter").value; clearAnalysis(); refreshData(false); });
 $("#tuningForm").addEventListener("input", tuningChanged);
+$("#overlayReveal").addEventListener("input", (event) => {
+  const value = Number(event.target.value);
+  $("#overlayRevealValue").textContent = `${value}%`;
+  const layer = $("#analysisShelf .detection-layer");
+  if (layer) layer.style.clipPath = `inset(0 ${100-value}% 0 0)`;
+  hideProductTooltip();
+});
 $("#tuningForm").addEventListener("submit", (e) => e.preventDefault());
 $("#resetTuning").addEventListener("click", () => { $("#tuningForm").reset(); tuningChanged(); });
 for (const id of ["showBoxes","showZones","showHeatmap","classFilter"]) $(`#${id}`).addEventListener("change", () => { renderShelf($("#analysisShelf"),state.analysis,true); renderShelf($("#monitorShelf"),state.analysis); });
@@ -363,5 +372,12 @@ $("#loginForm").addEventListener("submit",async(e)=>{e.preventDefault(); try { a
 $("#accountButton").addEventListener("click",async()=>{if(state.user?.local){setPage("admin");return;} try{await api("/api/logout",{method:"POST"}); location.reload();}catch(e){toast(e.message);} });
 window.addEventListener("offline",()=>{stopCamera(); notice("Offline / saved dashboard only. Reconnect to scan or update tasks.","error"); $("#healthLabel").textContent="Offline";});
 window.addEventListener("online",()=>boot());
-if("serviceWorker" in navigator) navigator.serviceWorker.register("/static/sw.js").catch(()=>{});
+if("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      if (registration.active?.scriptURL === `${location.origin}/static/sw.js`) registration.unregister();
+    }
+  }).catch(()=>{});
+  navigator.serviceWorker.register("/sw.js", {scope:"/", updateViaCache:"none"}).then((registration) => registration.update()).catch(()=>{});
+}
 clearAnalysis(); setPage("dashboard"); icons(); boot();
