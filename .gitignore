@@ -2,7 +2,6 @@
 __pycache__/
 *.pyc
 shelfsense.db
-models/*.pt
+data/
 training_data/
-runs/
-.DS_Store
+*.pyc

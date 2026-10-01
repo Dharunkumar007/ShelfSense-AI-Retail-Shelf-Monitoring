@@ -1,14 +1,12 @@
-"""YOLOv8 detector integration for ShelfSense AI.
+"""YOLOv8 detector integration for ShelfSense AI."""
 
-The app falls back to mock detections when models/best.pt is missing. After
-training, copy best.pt into models/ and the backend will use this file for
-uploaded shelf images.
-"""
-
+import json
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Any
 
+import cv2
+import numpy as np
+from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_PATH = ROOT / "models" / "best.pt"
@@ -37,23 +35,20 @@ def detect_products(image_bytes: bytes, content_type: str | None = None) -> list
     if not yolo_model_available():
         raise FileNotFoundError(f"Model not found: {MODEL_PATH}")
 
-    import json
-
-    from ultralytics import YOLO
-
-    suffix = ".jpg"
-    if content_type == "image/png":
-        suffix = ".png"
-
     with PLANOGRAM_PATH.open("r", encoding="utf-8") as handle:
         zones = json.load(handle)["zones"]
 
-    with NamedTemporaryFile(suffix=suffix, delete=True) as image_file:
-        image_file.write(image_bytes)
-        image_file.flush()
+    # Decode image directly from memory (fixes Windows file lock issues)
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        model = YOLO(str(MODEL_PATH))
-        results = model.predict(source=image_file.name, conf=0.25, verbose=False)
+    if img is None:
+        print("Failed to decode image bytes!")
+        return []
+
+    # Pass the numpy array directly to YOLO
+    model = YOLO(str(MODEL_PATH))
+    results = model.predict(source=img, conf=0.25, verbose=False)
 
     detections: list[dict[str, Any]] = []
     for result in results:
@@ -61,6 +56,7 @@ def detect_products(image_bytes: bytes, content_type: str | None = None) -> list
         names = result.names
         for index, box in enumerate(result.boxes):
             x1, y1, x2, y2 = box.xyxy[0].tolist()
+            # Convert bounding boxes to percentages (0 to 100)
             pct_box = [
                 round((x1 / width) * 100, 2),
                 round((y1 / height) * 100, 2),

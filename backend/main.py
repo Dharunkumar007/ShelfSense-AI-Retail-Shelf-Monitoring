@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.detector import detect_products, yolo_model_available
+from backend.detector import MODEL_PATH, detect_products, yolo_model_available
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -58,7 +58,7 @@ def load_planogram() -> dict[str, Any]:
 def generate_mock_detections(seed_value: int) -> list[dict[str, Any]]:
     rng = random.Random(seed_value)
     detections: list[dict[str, Any]] = []
-    products = ["Cereal", "Juice", "Snacks", "Soap", "Biscuits", "Milk"]
+    products = ["Product", "Stock Item", "Inventory"]
 
     for zone_index, zone in enumerate(load_planogram()["zones"]):
         expected = zone["expected_count"]
@@ -102,7 +102,7 @@ def analyze_detections(detections: list[dict[str, Any]]) -> dict[str, Any]:
         expected = zone["expected_count"]
         total_expected += expected
         total_detected += detected
-        occupancy = round((detected / expected) * 100, 1) if expected else 100
+        occupancy = min(100.0, round((detected / expected) * 100, 1) if expected else 100)
         status = "Full Stock"
 
         if occupancy <= zone["critical_threshold"]:
@@ -123,15 +123,13 @@ def analyze_detections(detections: list[dict[str, Any]]) -> dict[str, Any]:
             alerts.append(
                 {
                     "zone_id": zone["id"],
-                    "shelf": zone["name"],
-                    "product": zone["product"],
+                    "zone_name": zone["name"],
+                    "product": "Shelf Item",
                     "status": status,
-                    "message": f"{zone['name']} needs {zone_result['missing_count']} {zone['product']} items.",
-                    "priority": "High" if status == "Critical" else "Medium",
                 }
             )
 
-    occupancy = round((total_detected / total_expected) * 100, 1) if total_expected else 0
+    occupancy = min(100.0, round((total_detected / total_expected) * 100, 1) if total_expected else 0) 
     status = "Healthy"
     if occupancy < 50:
         status = "Critical"
@@ -201,29 +199,100 @@ def history() -> dict[str, Any]:
     }
 
 
+@app.post("/api/calibrate")
+async def calibrate_planogram(file: UploadFile = File(...)) -> dict[str, Any]:
+    import cv2
+    import numpy as np
+    from ultralytics import YOLO
+
+    raw = await file.read()
+    nparr = np.frombuffer(raw, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    model = YOLO(str(MODEL_PATH))
+    results = model.predict(source=img, conf=0.25, verbose=False)
+    boxes = results[0].boxes.xyxyn.tolist()
+
+    if not boxes:
+        return {"status": "error", "message": "No products detected"}
+
+    centers = [(box[1] + box[3]) / 2 for box in boxes]
+    boxes_with_centers = list(zip(boxes, centers))
+    boxes_with_centers.sort(key=lambda item: item[1])
+
+    rows = []
+    current_row = [boxes_with_centers[0]]
+    for index in range(1, len(boxes_with_centers)):
+        if boxes_with_centers[index][1] - current_row[-1][1] > 0.06:
+            rows.append(current_row)
+            current_row = [boxes_with_centers[index]]
+        else:
+            current_row.append(boxes_with_centers[index])
+    rows.append(current_row)
+
+    zones = []
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    for row_index, row in enumerate(rows):
+        y1 = max(0, min(box[0][1] for box in row) * 100 - 2.0)
+        y2 = min(100, max(box[0][3] for box in row) * 100 + 2.0)
+        expected = int(len(row) * 1.1)
+        half = max(1, expected // 2)
+        letter = letters[row_index % 26]
+
+        zones.append(
+            {
+                "id": f"{letter}1",
+                "name": f"Shelf {row_index + 1} Left",
+                "expected_count": half,
+                "critical_threshold": 45,
+                "low_threshold": 75,
+                "bbox": [0, round(y1, 1), 50, round(y2, 1)],
+            }
+        )
+        zones.append(
+            {
+                "id": f"{letter}2",
+                "name": f"Shelf {row_index + 1} Right",
+                "expected_count": half,
+                "critical_threshold": 45,
+                "low_threshold": 75,
+                "bbox": [50, round(y1, 1), 100, round(y2, 1)],
+            }
+        )
+
+    with PLANOGRAM_PATH.open("w", encoding="utf-8") as handle:
+        json.dump({"zones": zones}, handle, indent=2)
+
+    return {"status": "success", "zones_created": len(zones), "shelves": len(rows)}
+
+
 @app.post("/api/analyze")
 async def analyze(file: UploadFile | None = File(default=None)) -> dict[str, Any]:
-    image_data = None
-    seed_value = int(time.time())
-    mode = "Mock AI detection. Train YOLOv8 and place models/best.pt to enable real detection."
+    # If no file is provided, return an empty state safely
+    if file is None:
+        return {
+            "occupancy": 0,
+            "status": "Ready",
+            "expected_items": 0,
+            "detected_items": 0,
+            "zones": [],
+            "alerts": [],
+            "detections": [],
+            "trend": [0, 0, 0, 0, 0, 0],
+            "image": None,
+            "mode": "Waiting for input...",
+        }
 
-    if file is not None:
-        raw = await file.read()
-        seed_value = sum(raw[:4096]) + len(raw)
-        image_data = f"data:{file.content_type};base64,{base64.b64encode(raw).decode('ascii')}"
-    else:
-        raw = b""
+    raw = await file.read()
+    image_data = f"data:{file.content_type};base64,{base64.b64encode(raw).decode('ascii')}"
 
-    if file is not None and yolo_model_available():
-        detections = detect_products(raw, file.content_type)
-        mode = "YOLOv8 real model detection from models/best.pt."
-    else:
-        detections = generate_mock_detections(seed_value)
-
+    # Process real image
+    detections = detect_products(raw, file.content_type)
     analysis = analyze_detections(detections)
     analysis["image"] = image_data
-    analysis["mode"] = mode
-    record_scan(file.filename if file else "live-monitor-demo", analysis)
+    analysis["mode"] = "YOLOv8 real model detection."
+
+    record_scan(file.filename, analysis)
     return analysis
 
 
