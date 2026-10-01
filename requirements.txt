@@ -7,3 +7,4 @@ python-dotenv
 python-multipart
 ultralytics
 opencv-python-headless
+
