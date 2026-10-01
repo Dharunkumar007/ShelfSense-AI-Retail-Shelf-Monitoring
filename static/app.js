@@ -55,6 +55,27 @@ function tuningChanged() {
   $("#iouOutput").textContent = `${Math.round(t.iou*100)}%`;
   $("#tuningState").textContent = "Pending settings / next scan";
 }
+const boxStyle = (bbox) => `left:${bbox[0]}%;top:${bbox[1]}%;width:${bbox[2]-bbox[0]}%;height:${bbox[3]-bbox[1]}%`;
+function getHeatmapColor(item, zones) {
+  const cx = (item.bbox[0] + item.bbox[2]) / 2;
+  const cy = (item.bbox[1] + item.bbox[3]) / 2;
+  const zone = zones.find((z) => cx >= z.bbox[0] && cx <= z.bbox[2] && cy >= z.bbox[1] && cy <= z.bbox[3]);
+  if (!zone || !zone.expected_count) return "#3B82F6";
+  const percentage = (zone.detected_count / zone.expected_count) * 100;
+  if (percentage >= 75) return "#10B981";
+  if (percentage >= 45) return "#F59E0B";
+  return "#EF4444";
+}
+function renderLiveOverlay(target, analysis) {
+  if (!target) return;
+  const detections = analysis?.detections || [];
+  const zones = analysis?.zones || [];
+  target.innerHTML = detections.map((item) => {
+    const conf = Math.round((item.confidence || 0) * 100);
+    const color = getHeatmapColor(item, zones);
+    return `<div class="product-box pulse-hover" style="${boxStyle(item.bbox)}; border-color: ${color}; box-shadow: 0 0 10px ${color}40;" data-confidence="${conf.toFixed(1)}" data-product="${escapeHtml(item.label)}" aria-label="${escapeHtml(item.label)}: ${conf}% detection confidence"><div class="box-crosshair" style="background: ${color};"></div><span class="box-tooltip" style="background: ${color};">${escapeHtml(item.label)} [${conf}%]</span></div>`;
+  }).join("");
+}
 function renderShelf(target, analysis, interactive = false) {
   hideProductTooltip();
   if (!analysis?.image) { target.innerHTML = '<div class="inspection-empty"><i data-lucide="scan-line"></i><strong>No image selected</strong><span>Awaiting inspection</span></div>'; target.className = "shelf-wrap empty-visual"; target.style.removeProperty("aspect-ratio"); icons(); return; }
@@ -64,10 +85,10 @@ function renderShelf(target, analysis, interactive = false) {
   const zones = $("#showZones").checked;
   const heat = $("#showHeatmap").checked;
   const filter = $("#classFilter").value;
-  const style = (b) => `left:${b[0]}%;top:${b[1]}%;width:${b[2]-b[0]}%;height:${b[3]-b[1]}%`;
   target.innerHTML = `<img class="scan-image" src="${escapeHtml(analysis.image)}" alt="Shelf scan ${analysis.id}" loading="lazy"><div class="detection-layer">` +
-    (zones || heat ? analysis.zones.map((z) => `<button type="button" class="zone-overlay ${level(z.status)} ${heat ? "heat" : ""}" style="${style(z.bbox)}" data-zone="${escapeHtml(z.id)}" aria-label="${escapeHtml(z.name)}: ${z.occupancy}% available"><span class="zone-label">${escapeHtml(z.id)}</span></button>`).join("") : "") +
-    (boxes ? analysis.detections.filter((b) => !filter || b.label === filter).map((b) => `<button type="button" class="product-box" style="${style(b.bbox)}" data-confidence="${(b.confidence*100).toFixed(1)}" data-product="${escapeHtml(b.label)}" aria-label="${escapeHtml(b.label)}: ${(b.confidence*100).toFixed(1)}% detection confidence"></button>`).join("") : "") + '</div>';
+    (zones || heat ? analysis.zones.map((z) => `<button type="button" class="zone-overlay ${level(z.status)} ${heat ? "heat" : ""}" style="${boxStyle(z.bbox)}" data-zone="${escapeHtml(z.id)}" aria-label="${escapeHtml(z.name)}: ${z.occupancy}% available"><span class="zone-label">${escapeHtml(z.id)}</span></button>`).join("") : "") +
+    '<div class="live-overlay"></div></div>';
+  renderLiveOverlay(target.querySelector(".live-overlay"), boxes ? { ...analysis, detections: analysis.detections.filter((b) => !filter || b.label === filter) } : null);
   if (interactive) target.querySelector(".detection-layer").style.clipPath = `inset(0 ${100-Number($("#overlayReveal").value)}% 0 0)`;
   target.querySelectorAll(".product-box").forEach((box) => {
     box.addEventListener("pointerenter", () => showProductTooltip(box));
@@ -348,6 +369,35 @@ $("#inventorySearch").addEventListener("input",renderInventory);
 $("#inventoryTable").addEventListener("input",(e) => { const row=e.target.closest("[data-zone-id]"); if (!row) return; const z=state.layout.zones.find((z)=>z.id===row.dataset.zoneId); if (e.target.dataset.bound !== undefined) z.bbox[+e.target.dataset.bound]=+e.target.value; else if (e.target.dataset.field) z[e.target.dataset.field]=e.target.type === "number" ? +e.target.value : e.target.value; $("#layoutMessage").textContent="Unsaved changes"; });
 $("#addZone").addEventListener("click",()=>{ let index=state.layout.zones.length+1; while(state.layout.zones.some((z)=>z.id===`Z${index}`)) index++; state.layout.zones.push({id:`Z${index}`,name:`Zone ${index}`,sku:"",product:"Shelf item",expected_count:10,critical_threshold:45,low_threshold:75,bbox:[0,0,100,100]}); renderInventory(); $("#layoutMessage").textContent="Unsaved changes"; });
 $("#saveLayout").addEventListener("click",async()=>{ try { state.layout=await api("/api/planogram",jsonRequest("PUT",state.layout)); $("#layoutMessage").textContent="Layout saved. Existing scans retain their original layout."; renderInventory(); } catch(e) { $("#layoutMessage").textContent=e.message; } });
+document.querySelector("#resetDbBtn")?.addEventListener("click", () => {
+  const dialog = document.querySelector("#resetDialog");
+  if (!dialog.open) dialog.showModal();
+});
+document.querySelector("#closeReset")?.addEventListener("click", () => document.querySelector("#resetDialog").close());
+document.querySelector("#cancelResetBtn")?.addEventListener("click", () => document.querySelector("#resetDialog").close());
+document.querySelector("#resetForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const submitBtn = e.target.querySelector("button[type='submit']");
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Wiping...";
+  submitBtn.disabled = true;
+  try {
+    const response = await fetch("/api/admin/reset", { method: "POST", credentials: "same-origin" });
+    const result = await response.json();
+    if (response.ok && result.status === "success") {
+      toast("System reset successful. Reloading workspace...");
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      toast("Reset failed: " + (result.message || result.detail || "Unknown error."));
+    }
+  } catch (err) {
+    toast("Network error during reset.");
+  } finally {
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+    document.querySelector("#resetDialog").close();
+  }
+});
 let searchTimer;
 for(const id of ["reportDays","historyStatus","historySearch"]) $(`#${id}`).addEventListener("input",()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(()=>refreshData(false),250); });
 $("#moreHistory").addEventListener("click",async()=>{ try { const data=await api(`/api/history?${historyQuery()}&before=${state.next}`); state.history.push(...data.history); state.next=data.next; renderHistory(); } catch(e){toast(e.message);} });
@@ -368,7 +418,7 @@ $("#closeTask").addEventListener("click",()=>$("#taskDialog").close());
 $("#taskForm").addEventListener("submit",async(e)=>{ e.preventDefault(); const f=e.target.elements; try { await api(`/api/tasks/${f.id.value}`,jsonRequest("PATCH",{state:f.state.value,assignee:f.assignee.value,note:f.note.value})); $("#taskDialog").close(); await refreshData(false); }catch(error){$("#taskError").textContent=error.message;} });
 $("#userForm").addEventListener("submit",async(e)=>{e.preventDefault(); const data=Object.fromEntries(new FormData(e.target)); try { await api("/api/users",jsonRequest("POST",data)); e.target.reset(); if(state.user.local){state.user=null; $("#loginDialog").showModal();}else await loadAdmin(); toast("User created"); }catch(error){toast(error.message);} });
 $("#loginDialog").addEventListener("cancel",(e)=>e.preventDefault());
-$("#loginForm").addEventListener("submit",async(e)=>{e.preventDefault(); try { await api("/api/login",jsonRequest("POST",Object.fromEntries(new FormData(e.target)))); $("#loginDialog").close(); e.target.reset(); await boot(); }catch(error){$("#loginError").textContent=error.message;} });
+$("#loginForm").addEventListener("submit",async(e)=>{e.preventDefault(); try { await api("/api/login",jsonRequest("POST",Object.fromEntries(new FormData(e.target)))); const alertBanner = document.querySelector("#loginError, .alert-banner"); if (alertBanner) alertBanner.style.display = "none"; $("#loginDialog").close(); e.target.reset(); await boot(); }catch(error){$("#loginError").textContent=error.message; $("#loginError").style.display="";} });
 $("#accountButton").addEventListener("click",async()=>{if(state.user?.local){setPage("admin");return;} try{await api("/api/logout",{method:"POST"}); location.reload();}catch(e){toast(e.message);} });
 window.addEventListener("offline",()=>{stopCamera(); notice("Offline / saved dashboard only. Reconnect to scan or update tasks.","error"); $("#healthLabel").textContent="Offline";});
 window.addEventListener("online",()=>boot());

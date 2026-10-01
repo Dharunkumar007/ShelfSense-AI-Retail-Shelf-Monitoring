@@ -24,7 +24,7 @@ from starlette.concurrency import run_in_threadpool
 
 from backend.detector import Tuning, infer, prepare_image, yolo_model_available
 from backend.security import current_user, hash_password, require, verify_password
-from backend.storage import engine, events, init_db, scans, sessions, settings, tasks, users
+from backend.storage import engine, events, init_db, metadata, scans, sessions, settings, tasks, users
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_UPLOAD = 12 * 1024 * 1024
@@ -298,6 +298,16 @@ def save_planogram(data: Planogram, user=Depends(require("admin"))):
         conn.execute(insert(settings).values(key="planogram", value=data.model_dump_json()))
         add_event(conn, None, user["username"], "Updated inventory layout and thresholds.")
     return data.model_dump()
+
+
+@app.post("/api/admin/reset")
+def reset_data(user=Depends(require("admin"))):
+    try:
+        metadata.drop_all(bind=engine)
+        metadata.create_all(bind=engine)
+        return {"status": "success", "message": "Database and planogram wiped."}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}
 
 
 @app.post("/api/analyze")
