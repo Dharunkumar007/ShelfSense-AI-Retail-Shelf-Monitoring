@@ -133,6 +133,15 @@
             <input value="Aisle 5 Monitor" />
             <input value="Entrance Shelf" />
           </article>
+          <article class="panel">
+            <h2>Auto-Calibrate Layout</h2>
+            <p style="color:var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+              Upload a fully stocked reference image to establish the ground-truth baseline.
+            </p>
+            <input type="file" id="calibrateInput" accept="image/*" style="background: transparent; border: none; padding: 0; margin-bottom: 1rem;" />
+            <button class="btn" id="calibrateBtn" style="width: 100%;">Generate Planogram</button>
+            <span id="calibrateStatus" style="display: block; margin-top: 1rem; font-size: 0.85rem; color: var(--accent-blue);"></span>
+          </article>
         </section>
       </section>
     </main>

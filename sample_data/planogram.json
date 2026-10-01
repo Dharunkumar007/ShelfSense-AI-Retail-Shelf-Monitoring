@@ -1,60 +1,56 @@
 {
-  "store": "ShelfSense Demo Store",
-  "camera": "Aisle 3 Monitor",
   "zones": [
     {
       "id": "A1",
-      "name": "Top Shelf Left",
-      "product": "Cereal",
-      "expected_count": 8,
-      "bbox": [6, 8, 48, 32],
+      "name": "Shelf 1 Left",
+      "expected_count": 65,
+      "critical_threshold": 45,
       "low_threshold": 75,
-      "critical_threshold": 45
+      "bbox": [
+        0,
+        20.8,
+        50,
+        81.5
+      ]
     },
     {
       "id": "A2",
-      "name": "Top Shelf Right",
-      "product": "Juice",
-      "expected_count": 7,
-      "bbox": [52, 8, 94, 32],
+      "name": "Shelf 1 Right",
+      "expected_count": 65,
+      "critical_threshold": 45,
       "low_threshold": 75,
-      "critical_threshold": 45
+      "bbox": [
+        50,
+        20.8,
+        100,
+        81.5
+      ]
     },
     {
       "id": "B1",
-      "name": "Middle Shelf Left",
-      "product": "Snacks",
-      "expected_count": 10,
-      "bbox": [6, 38, 48, 62],
+      "name": "Shelf 2 Left",
+      "expected_count": 7,
+      "critical_threshold": 45,
       "low_threshold": 75,
-      "critical_threshold": 45
+      "bbox": [
+        0,
+        78.6,
+        50,
+        91.2
+      ]
     },
     {
       "id": "B2",
-      "name": "Middle Shelf Right",
-      "product": "Soap",
-      "expected_count": 9,
-      "bbox": [52, 38, 94, 62],
+      "name": "Shelf 2 Right",
+      "expected_count": 7,
+      "critical_threshold": 45,
       "low_threshold": 75,
-      "critical_threshold": 45
-    },
-    {
-      "id": "C1",
-      "name": "Bottom Shelf Left",
-      "product": "Biscuits",
-      "expected_count": 8,
-      "bbox": [6, 68, 48, 92],
-      "low_threshold": 75,
-      "critical_threshold": 45
-    },
-    {
-      "id": "C2",
-      "name": "Bottom Shelf Right",
-      "product": "Milk",
-      "expected_count": 6,
-      "bbox": [52, 68, 94, 92],
-      "low_threshold": 75,
-      "critical_threshold": 45
+      "bbox": [
+        50,
+        78.6,
+        100,
+        91.2
+      ]
     }
   ]
 }
