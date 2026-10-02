@@ -73,7 +73,7 @@ def main():
             address = f"http://127.0.0.1:{proxy.server_port}"
             with sync_playwright() as p:
                 browser = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True, args=["--no-sandbox"])
-                page = browser.new_page(viewport={"width":1920,"height":1080})
+                page = browser.new_page(viewport={"width":1920,"height":1080}, bypass_csp=True)
                 page.goto(address)
                 assert page.locator("#occupancyValue").inner_text() == "92.8%"
                 assert page.evaluate("window.legacyAssetLoaded")

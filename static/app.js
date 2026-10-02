@@ -1,13 +1,20 @@
 "use strict";
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
+function storedConsent() {
+  try { return localStorage.getItem("shelfsense-consent") || ""; } catch { return ""; }
+}
 const state = { user: null, analysis: null, selectedFile: null, scanning: false, cameraRunning: false,
-  stream: null, timer: null, history: [], tasks: [], layout: { zones: [] }, next: null, source: "upload", refresh: 0 };
+  stream: null, timer: null, history: [], tasks: [], layout: { zones: [] }, next: null, source: "upload", refresh: 0,
+  consent: storedConsent() };
 const escapeHtml = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const icons = () => window.lucide?.createIcons();
 const level = (s) => /critical/i.test(s) ? "danger" : /low/i.test(s) ? "warn" : "good";
 const date = (t) => new Date(t * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 const empty = (text) => `<div class="empty-row">${escapeHtml(text)}</div>`;
+const descriptions = { dashboard: "Shelf availability, evidence, and action.", monitor: "Current camera observations and detection quality.",
+  analysis: "Zone performance and scan comparison.", alerts: "Ownership, progress, and replenishment records.",
+  inventory: "Expected facings, product assignments, and shelf zones.", reports: "Availability history and operational reports.", admin: "People, camera connections, and system status." };
 function notice(message, type = "") {
   $("#fileName").textContent = message;
   if (!type && ["Complete", "Saved scan"].includes($("#scanState").textContent)) type = "success";
@@ -29,16 +36,27 @@ async function api(path, options = {}) {
     const body = await response.json().catch(() => ({}));
     throw new Error(typeof body.detail === "string" ? body.detail : body.detail?.map((e) => e.msg).join("; ") || `Request failed (${response.status})`);
   }
-  return response.json();
+  return response.status === 204 ? null : response.json();
 }
 const jsonRequest = (method, data) => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+function track(event, page = "system") {
+  if (state.consent !== "analytics" || !state.user) return;
+  fetch("/api/telemetry", { ...jsonRequest("POST", {event, page}), credentials:"same-origin", keepalive:true }).catch(()=>{});
+}
 function setPage(page) {
   hideProductTooltip();
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `${page}View`));
   $$("[data-page]").forEach((b) => { b.classList.toggle("active", b.dataset.page === page); b.setAttribute("aria-current", b.dataset.page === page ? "page" : "false"); });
   $("#pageTitle").textContent = $(`[data-page="${page}"]`).dataset.title;
+  $("#pageDescription").textContent = descriptions[page];
+  document.title = `${$("#pageTitle").textContent} | ShelfSense AI`;
   if (page !== "monitor") stopCamera();
   window.scrollTo({ top: 0, behavior: "smooth" });
+  document.querySelectorAll(`#${page}View > *`).forEach((element, index) => {
+    element.classList.remove("reveal-in");
+    requestAnimationFrame(() => { element.style.setProperty("--reveal-delay", `${Math.min(index,6)*45}ms`); element.classList.add("reveal-in"); });
+  });
+  track("page_view", page);
 }
 function tuning() {
   const f = $("#tuningForm").elements;
@@ -49,7 +67,7 @@ function tuningChanged() {
   const t = tuning();
   $("#confidenceOutput").textContent = `${Math.round(t.confidence*100)}%`;
   $("#iouOutput").textContent = `${Math.round(t.iou*100)}%`;
-  $("#tuningState").textContent = "Pending settings / next scan";
+  $("#tuningState").textContent = `Next scan: conf ${Math.round(t.confidence*100)}%, IoU ${Math.round(t.iou*100)}%, ${t.image_size}px, max ${t.max_detections}, min area ${t.min_area}%${t.contrast ? ", CLAHE on" : ""}`;
 }
 const boxStyle = (bbox) => `left:${bbox[0]}%;top:${bbox[1]}%;width:${bbox[2]-bbox[0]}%;height:${bbox[3]-bbox[1]}%`;
 function getHeatmapColor(item, zones) {
@@ -69,7 +87,7 @@ function renderLiveOverlay(target, analysis) {
   target.innerHTML = detections.map((item) => {
     const conf = Math.round((item.confidence || 0) * 100);
     const color = getHeatmapColor(item, zones);
-    return `<div class="product-box pulse-hover" style="${boxStyle(item.bbox)}; border-color: ${color}; box-shadow: 0 0 10px ${color}40;" data-confidence="${conf.toFixed(1)}" data-product="${escapeHtml(item.label)}" aria-label="${escapeHtml(item.label)}: ${conf}% detection confidence"><div class="box-crosshair" style="background: ${color};"></div><span class="box-tooltip" style="background: ${color};">${escapeHtml(item.label)} [${conf}%]</span></div>`;
+    return `<div class="product-box pulse-hover" tabindex="0" role="button" style="${boxStyle(item.bbox)}; border-color: ${color}; box-shadow: 0 0 10px ${color}40;" data-confidence="${conf.toFixed(1)}" data-product="${escapeHtml(item.label)}" aria-label="${escapeHtml(item.label)}: ${conf}% detection confidence"><div class="box-crosshair" style="background: ${color};"></div><span class="box-tooltip" style="background: ${color};">${escapeHtml(item.label)} [${conf}%]</span></div>`;
   }).join("");
 }
 function renderShelf(target, analysis, interactive = false) {
@@ -176,6 +194,7 @@ async function runScan(run) {
     notice(result.duplicate ? `Identical input / opened scan #${result.id}` : `${result.source} / scan #${result.id}`);
     $("#cameraStatus").textContent = state.cameraRunning ? `Last frame ${date(result.created_at)}` : "Stopped";
     await refreshData(false);
+    track("scan_complete", state.source === "upload" ? "dashboard" : "monitor");
     return result;
   } catch (error) {
     $("#scanState").textContent = "Failed"; notice(error.message, "error");
@@ -269,7 +288,22 @@ function renderInventory() {
   const query = $("#inventorySearch").value.toLowerCase();
   const disabled = state.user?.role === "admin" ? "" : "disabled";
   const field = (z, name, type="text", extra="") => `<input aria-label="${escapeHtml(z.id)} ${name}" data-field="${name}" type="${type}" value="${escapeHtml(z[name] ?? "")}" ${extra} ${disabled}>`;
-  $("#inventoryTable").innerHTML = state.layout.zones.filter((z) => `${z.id} ${z.name} ${z.sku || ""} ${z.product || ""}`.toLowerCase().includes(query)).map((z) => `<tr data-zone-id="${escapeHtml(z.id)}"><td><strong>${escapeHtml(z.id)}</strong>${field(z,"name")}</td><td>${field(z,"sku")}${field(z,"product")}</td><td>${field(z,"expected_count","number",'min="1" max="10000"')}</td><td>${field(z,"critical_threshold","number",'min="0" max="99"')}${field(z,"low_threshold","number",'min="1" max="100"')}</td><td class="bounds-cell">${z.bbox.map((v,i) => `<input aria-label="${escapeHtml(z.id)} ${["left","top","right","bottom"][i]}" data-bound="${i}" type="number" step="0.1" min="0" max="100" value="${v}" ${disabled}>`).join("")}</td><td><button class="icon-button" data-remove-zone="${escapeHtml(z.id)}" title="Remove zone" aria-label="Remove ${escapeHtml(z.id)}" ${disabled}><i data-lucide="trash-2"></i></button></td></tr>`).join(""); icons();
+  $("#inventoryTable").innerHTML = state.layout.zones.filter((z) => `${z.id} ${z.name} ${z.sku || ""} ${z.product || ""}`.toLowerCase().includes(query)).map((z) => `<tr data-zone-id="${escapeHtml(z.id)}"><td><strong>${escapeHtml(z.id)}</strong>${field(z,"name")}</td><td>${field(z,"sku")}${field(z,"product")}</td><td>${field(z,"expected_count","number",'min="1" max="10000"')}</td><td>${field(z,"critical_threshold","number",'min="0" max="99"')}${field(z,"low_threshold","number",'min="1" max="100"')}</td><td class="bounds-cell">${z.bbox.map((v,i) => `<input aria-label="${escapeHtml(z.id)} ${["left","top","right","bottom"][i]}" data-bound="${i}" type="number" step="0.1" min="0" max="100" value="${v}" ${disabled}>`).join("")}</td><td><button class="icon-button" data-remove-zone="${escapeHtml(z.id)}" title="Remove zone" aria-label="Remove ${escapeHtml(z.id)}" ${disabled}><i data-lucide="trash-2"></i></button></td></tr>`).join("");
+  enhanceNumberInputs($("#inventoryTable")); icons();
+}
+function enhanceNumberInputs(root = document) {
+  root.querySelectorAll('input[type="number"]:not([data-enhanced])').forEach((input) => {
+    input.dataset.enhanced = "true";
+    const wrap = document.createElement("div"); wrap.className = "number-stepper";
+    input.parentNode.insertBefore(wrap,input); wrap.append(input);
+    for (const [direction,label,icon] of [[-1,"Decrease","minus"],[1,"Increase","plus"]]) {
+      const button = document.createElement("button"); button.type="button"; button.className=`number-control ${direction<0?"decrease":"increase"}`;
+      button.setAttribute("aria-label", `${label} ${input.getAttribute("aria-label") || input.name || "value"}`);
+      button.innerHTML=`<i data-lucide="${icon}"></i>`;
+      button.addEventListener("click", () => { direction < 0 ? input.stepDown() : input.stepUp(); input.dispatchEvent(new Event("input",{bubbles:true})); });
+      wrap.append(button);
+    }
+  });
 }
 async function loadAdmin() {
   const [layout, health, cameras] = await Promise.all([api("/api/planogram"), api("/api/health"), api("/api/cameras")]);
@@ -283,9 +317,12 @@ async function loadAdmin() {
   $("#sourceFilter").innerHTML = cameras.sources.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s === "upload" ? "Uploaded images" : s === "browser" ? "Browser camera" : s)}</option>`).join("");
   $("#sourceFilter").value = state.source;
   if (["admin","manager"].includes(state.user.role)) {
-    const data = await api("/api/users");
+    const [data, usage] = await Promise.all([api("/api/users"), api("/api/telemetry/summary")]);
     $("#usersList").innerHTML = data.users.map((u) => `<div><span>${escapeHtml(u.username)}</span><b>${u.role}</b></div>`).join("") || empty("Local access only / no accounts yet");
     $("#teamNames").innerHTML = data.users.map((u) => `<option value="${escapeHtml(u.username)}">`).join("");
+    const total = usage.events.reduce((sum,item)=>sum+item.count,0);
+    const scans = usage.events.filter((item)=>item.event==="scan_complete").reduce((sum,item)=>sum+item.count,0);
+    $("#telemetrySummary").innerHTML = `<div><span>Consented events</span><strong>${total}</strong></div><div><span>Scans</span><strong>${scans}</strong></div><div><span>Page views</span><strong>${total-scans-usage.events.filter((i)=>i.event==="report_export").reduce((s,i)=>s+i.count,0)}</strong></div><div><span>Period</span><strong>${usage.days} days</strong></div>`;
   }
 }
 async function startCamera() {
@@ -364,7 +401,7 @@ $("#compareButton").addEventListener("click",compare);
 $("#inventorySearch").addEventListener("input",renderInventory);
 $("#inventoryTable").addEventListener("input",(e) => { const row=e.target.closest("[data-zone-id]"); if (!row) return; const z=state.layout.zones.find((z)=>z.id===row.dataset.zoneId); if (e.target.dataset.bound !== undefined) z.bbox[+e.target.dataset.bound]=+e.target.value; else if (e.target.dataset.field) z[e.target.dataset.field]=e.target.type === "number" ? +e.target.value : e.target.value; $("#layoutMessage").textContent="Unsaved changes"; });
 $("#addZone").addEventListener("click",()=>{ let index=state.layout.zones.length+1; while(state.layout.zones.some((z)=>z.id===`Z${index}`)) index++; state.layout.zones.push({id:`Z${index}`,name:`Zone ${index}`,sku:"",product:"Shelf item",expected_count:10,critical_threshold:45,low_threshold:75,bbox:[0,0,100,100]}); renderInventory(); $("#layoutMessage").textContent="Unsaved changes"; });
-$("#saveLayout").addEventListener("click",async()=>{ try { state.layout=await api("/api/planogram",jsonRequest("PUT",state.layout)); $("#layoutMessage").textContent="Layout saved. Existing scans retain their original layout."; renderInventory(); } catch(e) { $("#layoutMessage").textContent=e.message; } });
+$("#saveLayout").addEventListener("click",async()=>{ const inputs=[...$("#inventoryTable").querySelectorAll("input")]; if(inputs.some((input)=>!input.reportValidity())) return; try { state.layout=await api("/api/planogram",jsonRequest("PUT",state.layout)); $("#layoutMessage").textContent="Layout saved successfully. Existing scans retain their original layout."; renderInventory(); } catch(e) { $("#layoutMessage").textContent=`Could not save layout: ${e.message}`; } });
 document.querySelector("#resetDbBtn")?.addEventListener("click", () => {
   const dialog = document.querySelector("#resetDialog");
   if (!dialog.open) dialog.showModal();
@@ -397,7 +434,7 @@ document.querySelector("#resetForm")?.addEventListener("submit", async (e) => {
 let searchTimer;
 for(const id of ["reportDays","historyStatus","historySearch"]) $(`#${id}`).addEventListener("input",()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(()=>refreshData(false),250); });
 $("#moreHistory").addEventListener("click",async()=>{ try { const data=await api(`/api/history?${historyQuery()}&before=${state.next}`); state.history.push(...data.history); state.next=data.next; renderHistory(); } catch(e){toast(e.message);} });
-$("#exportButton").addEventListener("click",()=>{ window.location.href=`/api/reports.csv?camera=${encodeURIComponent(state.source)}&days=${$("#reportDays").value}`; });
+$("#exportButton").addEventListener("click",()=>{ track("report_export","reports"); window.location.href=`/api/reports.csv?camera=${encodeURIComponent(state.source)}&days=${$("#reportDays").value}`; });
 $("#printButton").addEventListener("click",()=>window.print());
 $("#startCamera").addEventListener("click",startCamera); $("#stopCamera").addEventListener("click",stopCamera);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)stopCamera();});
@@ -416,6 +453,20 @@ $("#userForm").addEventListener("submit",async(e)=>{e.preventDefault(); const da
 $("#loginDialog").addEventListener("cancel",(e)=>e.preventDefault());
 $("#loginForm").addEventListener("submit",async(e)=>{e.preventDefault(); try { await api("/api/login",jsonRequest("POST",Object.fromEntries(new FormData(e.target)))); const alertBanner = document.querySelector("#loginError, .alert-banner"); if (alertBanner) alertBanner.style.display = "none"; $("#loginDialog").close(); e.target.reset(); await boot(); }catch(error){$("#loginError").textContent=error.message; $("#loginError").style.display="";} });
 $("#accountButton").addEventListener("click",async()=>{if(state.user?.local){setPage("admin");return;} try{await api("/api/logout",{method:"POST"}); location.reload();}catch(e){toast(e.message);} });
+function setConsent(value) {
+  state.consent=value;
+  try { localStorage.setItem("shelfsense-consent",value); } catch {}
+  $("#cookieBanner").hidden=true;
+  if(value==="analytics") { toast("Anonymous usage analytics enabled"); track("page_view", document.querySelector(".view.active")?.id.replace("View","") || "system"); }
+  else toast("Essential storage only");
+}
+$("#essentialCookies").addEventListener("click",()=>setConsent("essential"));
+$("#acceptAnalytics").addEventListener("click",()=>setConsent("analytics"));
+$("#privacyChoices").addEventListener("click",()=>$("#cookieBanner").hidden=false);
+$("#copyrightYear").textContent = new Date().getFullYear();
+enhanceNumberInputs();
+document.addEventListener("pointermove",(event)=>{ if(matchMedia("(pointer:fine)").matches){ document.documentElement.style.setProperty("--pointer-x",`${event.clientX}px`); document.documentElement.style.setProperty("--pointer-y",`${event.clientY}px`); }});
+if(!state.consent) $("#cookieBanner").hidden=false;
 window.addEventListener("offline",()=>{stopCamera(); notice("Offline / saved dashboard only. Reconnect to scan or update tasks.","error"); $("#healthLabel").textContent="Offline";});
 window.addEventListener("online",()=>boot());
 if("serviceWorker" in navigator) {

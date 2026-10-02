@@ -1,43 +1,15 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0a0a0a">
-  <title>Privacy Policy | ShelfSense AI</title>
-  <script src="/static/appearance.js?v=20261001-6"></script>
-  <link rel="stylesheet" href="/static/styles.css?v=20261001-6">
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#071f26"><meta name="description" content="ShelfSense AI privacy policy for shelf images, accounts, camera processing, and optional analytics."><title>Privacy Policy | ShelfSense AI</title><link rel="icon" type="image/jpeg" href="/static/shelfsense-favicon-logo.jpeg"><script src="/static/appearance.js?v=20261002-7"></script><link rel="stylesheet" href="/static/styles.css?v=20261002-7"></head>
 <body class="policy-page"><main>
-  <header>
-    <a href="/"><img class="login-logo" src="/static/shelfsense-logo.jpeg" width="618" height="185" alt="ShelfSense AI"></a>
-    <a href="/">Back to workspace</a>
-  </header>
-  
-  <h1>Privacy Policy</h1>
-  <p><strong>Effective Date:</strong> October 2026</p>
-
-  <h2>1. Information We Collect and Store</h2>
-  <p>ShelfSense AI is a platform designed for retail inventory management. To provide our Service, we collect and store the following data:</p>
-  <ul>
-    <li><strong>Account Data:</strong> Usernames, roles, salted password hashes, and expiring session records.</li>
-    <li><strong>Store Data:</strong> Saved scans containing compressed shelf images, filenames, source identifiers, timestamps, detection results, image-quality measurements, model identifiers, and inference settings.</li>
-    <li><strong>Workspace Layouts:</strong> Shelf layouts, restock assignments, completion notes, and activity records.</li>
-  </ul>
-
-  <h2>2. Camera and Image Processing</h2>
-  <p>Uploaded images and captured camera snapshots are sent to the workspace backend for model inference and storage. Starting a browser camera requires explicit permission. While Live Monitoring is active, snapshots are sent at the selected interval. Configured IP-camera snapshots are fetched securely by the backend. You should avoid including identifiable customers, staff, payment details, or unrelated personal information in shelf images.</p>
-
-  <h2>3. Cookies, Storage, and Third-Party Providers</h2>
-  <p>A session cookie keeps you signed in for up to eight hours, and your theme preference is saved in your browser's local storage. Our service worker caches application files for performance; it does not cache authenticated API responses or saved scan images. The application does not include advertising trackers or analytics scripts.</p>
-  <p>The interface icon library is downloaded from unpkg.com, which receives the network information necessary to serve that request. Login throttling mechanisms temporarily use the connecting IP address in the server memory to prevent abuse.</p>
-
-  <h2>4. Data Access and Retention</h2>
-  <p>Authorized workspace accounts can access records according to their role. There is no automatic retention schedule enabled by default; records remain until the operator removes them. The optional retention command preserves scans referenced by restock tasks. Account and image deletion are not self-service features in this release; Workspace Administrators have the authority to execute a full factory reset to permanently delete active data.</p>
-
-  <footer class="workspace-footer">
-    <span>ShelfSense AI</span>
-    <a href="/static/terms.html">Terms of Service</a>
-  </footer>
-</main></body>
-</html>
+  <header><a href="/"><img class="login-logo" src="/static/shelfsense-logo.jpeg" width="618" height="185" alt="ShelfSense AI"></a><a href="/">Back to workspace</a></header>
+  <h1>Privacy Policy</h1><p>Project edition / Updated 2 October 2026</p>
+  <h2>About this workspace</h2><p>ShelfSense AI analyzes retail shelf images. The person or organization operating your workspace controls its database, hosting, account access, and retention. This notice describes the current application; an operator may provide additional information for their deployment.</p>
+  <h2>Information stored</h2><p>The application stores account usernames, roles, salted password hashes, and expiring session records. Saved scans contain compressed shelf images, filenames, source identifiers, timestamps, detection results, image-quality measurements, model identifiers, and inference settings. Shelf layouts, restock assignments, completion notes, activity records, and consented anonymous usage counts are also stored.</p>
+  <h2>Camera and image processing</h2><p>Uploaded images and captured camera snapshots are sent to the workspace backend for model inference and storage. Starting a browser camera requires permission. While monitoring is active, snapshots are sent at the selected interval. Configured IP-camera snapshots are fetched by the backend. Stop monitoring to end browser capture.</p>
+  <h2>Cookies and browser storage</h2><p>A secure, HTTP-only session cookie keeps you signed in for up to eight hours. Your theme and privacy preferences are saved in browser local storage. The service worker caches application files; it does not cache authenticated API responses or saved scan images. With your permission, first-party analytics store anonymous page-view, scan-completion, and report-export counts in the workspace database. No advertising tracker is included.</p>
+  <h2>Access and service providers</h2><p>Authorized workspace accounts can access records according to their role. The current application uses a shared workspace, not isolated customer accounts. Hosting and database providers may process records and connection logs. The icon library is downloaded from unpkg.com, which receives the network information needed to serve that request. Login throttling temporarily uses the connecting IP address in server memory.</p>
+  <h2>Retention and requests</h2><p>Records remain until the operator removes them. Administrators can permanently reset workspace data, and the optional retention command preserves scans referenced by restock tasks. For questions, corrections, or removal requests, contact the person or organization that provided your access.</p>
+  <h2>Responsible uploads</h2><p>Use images you are authorized to process. Avoid including identifiable customers, staff, payment details, or unrelated personal information in shelf images and task notes.</p>
+  <footer class="workspace-footer"><span>ShelfSense AI</span><a href="/static/terms.html">Terms of Service</a></footer>
+</main></body></html>

@@ -166,6 +166,25 @@ def test_csrf_and_local_bootstrap_boundary(client):
     assert client.get("/api/health").headers["cache-control"] == "no-store"
 
 
+def test_security_headers_discovery_and_custom_404(client):
+    root = client.get("/")
+    assert root.headers["x-frame-options"] == "DENY"
+    assert "frame-ancestors 'none'" in root.headers["content-security-policy"]
+    assert client.get("/robots.txt").status_code == 200
+    assert "/static/privacy.html" in client.get("/sitemap.xml").text
+    missing = client.get("/missing-page")
+    assert missing.status_code == 404 and "This shelf is empty" in missing.text
+    assert client.get("/api/missing").json() == {"detail": "Not found."}
+
+
+def test_consent_telemetry_is_validated_and_summarized(client):
+    assert client.post("/api/telemetry", json={"event":"page_view", "page":"dashboard"}).status_code == 204
+    assert client.post("/api/telemetry", json={"event":"unknown", "page":"dashboard"}).status_code == 422
+    summary = client.get("/api/telemetry/summary").json()
+    assert summary["days"] == 30
+    assert summary["events"] == [{"event":"page_view", "page":"dashboard", "count":1}]
+
+
 def test_csv_injection_and_invalid_camera(client):
     client.post("/api/analyze",files={"file":("=SUM(1).png",raw_image(),"image/png")})
     assert "'=SUM(1).png" in client.get("/api/reports.csv").text
@@ -185,7 +204,7 @@ def test_removed_calibration_endpoint(client):
 def test_frontend_cache_headers_and_versioned_assets(client):
     root = client.get("/")
     assert root.headers["cache-control"] == "no-store"
-    assert 'styles.css?v=20261001-6' in root.text
-    assert 'app.js?v=20261001-6' in root.text
+    assert 'styles.css?v=20261002-7' in root.text
+    assert 'app.js?v=20261002-7' in root.text
     assert client.get("/sw.js").headers["cache-control"] == "no-store"
-    assert "must-revalidate" in client.get("/static/styles.css?v=20261001-6").headers["cache-control"]
+    assert "must-revalidate" in client.get("/static/styles.css?v=20261002-7").headers["cache-control"]

@@ -33,12 +33,16 @@ def main():
             with sync_playwright() as p:
                 browser = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True,
                     args=["--no-sandbox", "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"])
-                context = browser.new_context(viewport={"width":1440,"height":1000})
+                # String-based wait predicates use eval internally; security headers are tested separately.
+                context = browser.new_context(viewport={"width":1440,"height":1000}, bypass_csp=True)
                 page = context.new_page()
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(base)
                 page.wait_for_function("document.querySelector('#sourceContext').textContent.includes('Connected')")
+                assert page.locator("#cookieBanner").is_visible()
+                page.locator("#essentialCookies").click()
+                assert page.locator("#cookieBanner").is_hidden()
                 assert page.locator("#monitorShelf img").count() == 0
                 assert page.locator("#occupancyValue").inner_text() == "--"
                 assert page.locator("html").get_attribute("data-theme") == "dark"
@@ -101,6 +105,7 @@ def main():
                 page.locator("#monitorShelf img").wait_for(state="attached")
                 page.locator('[data-page="monitor"]').click()
                 page.locator('[name="confidence"]').fill("0.9")
+                assert "conf 90%" in page.locator("#tuningState").inner_text()
                 page.locator("#fileInput").set_input_files(str(ROOT / "test_1008.jpg"))
                 with page.expect_response(lambda r: r.url.endswith("/api/analyze") and r.request.method == "POST", timeout=120000) as pending:
                     page.locator("#scanButton").click()

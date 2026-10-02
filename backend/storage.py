@@ -40,6 +40,10 @@ Index("ix_task_camera_state", tasks.c.camera, tasks.c.state)
 events = Table("task_events", metadata, Column("id", Integer, primary_key=True),
     Column("task_id", Integer), Column("created_at", Integer), Column("actor", String(80)), Column("message", Text))
 Index("ix_event_created", events.c.created_at)
+telemetry = Table("telemetry_events", metadata, Column("id", Integer, primary_key=True),
+    Column("created_at", Integer, nullable=False), Column("event", String(40), nullable=False),
+    Column("page", String(24), nullable=False))
+Index("ix_telemetry_created", telemetry.c.created_at)
 users = Table("users", metadata, Column("id", Integer, primary_key=True),
     Column("username", String(80), unique=True), Column("password", Text), Column("role", String(20)))
 sessions = Table("sessions", metadata, Column("token", String(64), primary_key=True),

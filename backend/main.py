@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import delete, func, insert, select, update
@@ -24,7 +24,7 @@ from starlette.concurrency import run_in_threadpool
 
 from backend.detector import Tuning, infer, prepare_image, yolo_model_available
 from backend.security import current_user, hash_password, require, verify_password
-from backend.storage import engine, events, init_db, metadata, scans, sessions, settings, tasks, users
+from backend.storage import engine, events, init_db, metadata, scans, sessions, settings, tasks, telemetry, users
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_UPLOAD = 12 * 1024 * 1024
@@ -44,6 +44,10 @@ app = FastAPI(title="ShelfSense AI", version="2.0.0", lifespan=lifespan)
 
 @app.middleware("http")
 async def protect_origin(request, call_next):
+    forwarded_proto = request.headers.get("x-forwarded-proto", request.url.scheme).split(",")[0].strip()
+    if request.method in ("GET", "HEAD") and (os.environ.get("FORCE_HTTPS") == "1" or os.environ.get("VERCEL")) and forwarded_proto != "https":
+        target = request.url.replace(scheme="https")
+        return RedirectResponse(str(target), status_code=308)
     if request.method not in ("GET", "HEAD", "OPTIONS"):
         origin = request.headers.get("origin")
         trusted_origin = os.environ.get("SHELFSENSE_ORIGIN", "")
@@ -58,6 +62,13 @@ async def protect_origin(request, call_next):
         response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+    response.headers["Content-Security-Policy"] = ("default-src 'self'; script-src 'self' https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; "
+        "font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'")
+    if forwarded_proto == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 
@@ -187,6 +198,20 @@ def service_worker():
     return FileResponse(ROOT / "static/sw.js", media_type="application/javascript")
 
 
+@app.get("/robots.txt")
+def robots(request: Request):
+    origin = os.environ.get("SHELFSENSE_ORIGIN", str(request.base_url).rstrip("/"))
+    return PlainTextResponse(f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {origin}/sitemap.xml\n")
+
+
+@app.get("/sitemap.xml")
+def sitemap(request: Request):
+    origin = os.environ.get("SHELFSENSE_ORIGIN", str(request.base_url).rstrip("/"))
+    pages = ["/", "/static/privacy.html", "/static/terms.html"]
+    urls = "".join(f"<url><loc>{origin}{page}</loc></url>" for page in pages)
+    return Response(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>', media_type="application/xml")
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "model_available": yolo_model_available(), "storage": engine.dialect.name}
@@ -200,6 +225,7 @@ def me(user=Depends(current_user)):
 class Login(BaseModel):
     username: str = Field(min_length=1, max_length=80)
     password: str = Field(min_length=1, max_length=256)
+    website: str = Field(default="", max_length=0)
 
 
 @app.post("/api/login")
@@ -220,8 +246,9 @@ def login(data: Login, request: Request, response: Response):
         token = secrets.token_urlsafe(32)
         conn.execute(delete(sessions).where(sessions.c.expires < now))
         conn.execute(insert(sessions).values(token=hashlib.sha256(token.encode()).hexdigest(), user_id=user["id"], expires=now+28800))
+    secure_cookie = os.environ.get("COOKIE_SECURE") == "1" or request.headers.get("x-forwarded-proto") == "https" or request.url.scheme == "https"
     response.set_cookie("shelfsense_session", token, httponly=True, samesite="strict", max_age=28800,
-                        secure=os.environ.get("COOKIE_SECURE", "0") == "1")
+                        secure=secure_cookie, path="/")
     return {"username": user["username"], "role": user["role"]}
 
 
@@ -237,6 +264,27 @@ def logout(request: Request, response: Response):
 class NewUser(Login):
     password: str = Field(min_length=12, max_length=256)
     role: Literal["admin", "manager", "staff", "viewer"] = "staff"
+
+
+class TelemetryEvent(BaseModel):
+    event: Literal["page_view", "scan_complete", "report_export"]
+    page: Literal["dashboard", "monitor", "analysis", "alerts", "inventory", "reports", "admin", "system"]
+
+
+@app.post("/api/telemetry", status_code=204)
+def record_telemetry(data: TelemetryEvent, user=Depends(current_user)):
+    with engine.begin() as conn:
+        conn.execute(insert(telemetry).values(created_at=int(time.time()), event=data.event, page=data.page))
+    return Response(status_code=204)
+
+
+@app.get("/api/telemetry/summary")
+def telemetry_summary(user=Depends(require("admin", "manager"))):
+    cutoff = int(time.time()) - 30 * 86400
+    with engine.connect() as conn:
+        rows = conn.execute(select(telemetry.c.event, telemetry.c.page, func.count().label("count"))
+            .where(telemetry.c.created_at >= cutoff).group_by(telemetry.c.event, telemetry.c.page)).mappings()
+        return {"days": 30, "events": [dict(row) for row in rows]}
 
 
 @app.post("/api/users")
@@ -307,7 +355,7 @@ def reset_data(user=Depends(require("admin"))):
         metadata.create_all(bind=engine)
         return {"status": "success", "message": "Database and planogram wiped."}
     except Exception as exc:
-        return {"status": "error", "message": str(exc)}
+        raise HTTPException(500, "Workspace reset failed.") from exc
 
 
 @app.post("/api/analyze")
@@ -457,3 +505,10 @@ def camera_scan(camera: str, tuning: Tuning, user=Depends(require("admin", "mana
 
 
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+
+
+@app.exception_handler(404)
+async def custom_not_found(request: Request, exc):
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "Not found."}, status_code=404)
+    return FileResponse(ROOT / "static/404.html", status_code=404)

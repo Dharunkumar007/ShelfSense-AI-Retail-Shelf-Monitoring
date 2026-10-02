@@ -183,12 +183,14 @@ Replace the example with your camera's actual endpoint. The backend must reach t
 
 Tuning controls apply to the **next scan**:
 
-- Confidence: higher values reject more uncertain detections and can also miss products.
-- IoU: controls suppression of overlapping boxes.
-- Resolution: 640 is the default; larger inputs cost more processing time and memory.
-- Detection limit: caps the number of returned objects.
-- Minimum box area: filters small boxes; excessive filtering removes distant products.
-- Contrast enhancement: optional preprocessing; evaluate it on your own images.
+- Confidence is sent to YOLO as `conf` (default `0.25`); higher values reject more uncertain detections and can also miss products.
+- IoU is sent as `iou` (default `0.70`) and controls suppression of overlapping boxes.
+- Resolution is sent as `imgsz` (default `640`); larger inputs cost more processing time and memory.
+- Detection limit is sent as `max_det` (default `500`) and caps the number of returned objects.
+- Minimum box area is applied by backend post-processing as a percentage of the image area; excessive filtering removes distant products.
+- Contrast enhancement applies OpenCV CLAHE before inference; evaluate it on your own images.
+
+The controls are active, not sample UI. The browser validates and submits them with each upload or camera request, FastAPI validates the ranges, and the detector records the exact settings with the saved scan. The line beneath the controls shows the values that the next scan will use.
 
 Do not assume higher settings give better accuracy. Compare counts against labelled images, select settings using validation data, and evaluate once on held-out test data. Live camera task updates require two matching observations within 120 seconds. See [Operations](docs/OPERATIONS.md) for evaluation commands.
 
@@ -199,6 +201,17 @@ The website and installed PWA use the same backend, accounts, and database. For 
 For a trusted local-network preview, create the administrator first, then replace `--host 127.0.0.1` with `--host 0.0.0.0`. Open `http://LAPTOP_LAN_IP:8000` on another device on the same network and allow the port through your firewall only for that trusted network. `127.0.0.1` on a phone means the phone itself. Ordinary LAN HTTP generally does not provide browser camera/PWA capabilities; use HTTPS for those.
 
 Vercel/hosted deployment needs persistent `DATABASE_URL` storage, suitable model/dependency capacity, and HTTPS settings. A GitHub push does not itself verify deployment. Follow [Deployment](docs/DEPLOYMENT.md) before publishing.
+
+For a production HTTPS deployment, set these environment variables at the hosting provider:
+
+```text
+SHELFSENSE_ORIGIN=https://your-domain.example
+FORCE_HTTPS=1
+COOKIE_SECURE=1
+DATABASE_URL=postgresql+psycopg://...
+```
+
+`SHELFSENSE_ORIGIN` is also used for sitemap URLs and origin checks. Never put passwords, database URLs, model-provider keys, or camera credentials in `static/`, browser JavaScript, Git, or a public `.env` file. The application contains no frontend API secret. Keep deployment secrets in the provider's encrypted environment settings.
 
 ## 11. Move Existing Data to Another Computer
 
