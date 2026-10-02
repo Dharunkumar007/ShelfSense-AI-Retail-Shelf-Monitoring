@@ -3,53 +3,79 @@
     {
       "id": "A1",
       "name": "Shelf 1 Left",
-      "expected_count": 65,
+      "expected_count": 11,
       "critical_threshold": 45,
       "low_threshold": 75,
       "bbox": [
         0,
-        20.8,
+        2.9,
         50,
-        81.5
+        20.7
       ]
     },
     {
       "id": "A2",
       "name": "Shelf 1 Right",
-      "expected_count": 65,
+      "expected_count": 11,
       "critical_threshold": 45,
       "low_threshold": 75,
       "bbox": [
         50,
-        20.8,
+        2.9,
         100,
-        81.5
+        20.7
       ]
     },
     {
       "id": "B1",
       "name": "Shelf 2 Left",
-      "expected_count": 7,
+      "expected_count": 20,
       "critical_threshold": 45,
       "low_threshold": 75,
       "bbox": [
         0,
-        78.6,
+        18.7,
         50,
-        91.2
+        43.5
       ]
     },
     {
       "id": "B2",
       "name": "Shelf 2 Right",
-      "expected_count": 7,
+      "expected_count": 20,
       "critical_threshold": 45,
       "low_threshold": 75,
       "bbox": [
         50,
-        78.6,
+        18.7,
         100,
-        91.2
+        43.5
+      ]
+    },
+    {
+      "id": "C1",
+      "name": "Shelf 3 Left",
+      "expected_count": 50,
+      "critical_threshold": 45,
+      "low_threshold": 75,
+      "bbox": [
+        0,
+        39.0,
+        50,
+        89.9
+      ]
+    },
+    {
+      "id": "C2",
+      "name": "Shelf 3 Right",
+      "expected_count": 50,
+      "critical_threshold": 45,
+      "low_threshold": 75,
+      "bbox": [
+        50,
+        39.0,
+        100,
+        89.9
       ]
     }
   ]

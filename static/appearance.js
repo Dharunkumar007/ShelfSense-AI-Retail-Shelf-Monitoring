@@ -44,21 +44,22 @@
       finally { toggle.disabled = false; }
     });
 
-    const picker = document.querySelector("#chooseImage");
-    const ripple = (x, y) => {
-      if (reduced.matches || picker.querySelector("input").disabled) return;
-      const rect = picker.getBoundingClientRect();
+    const ripple = (target, x, y) => {
+      if (reduced.matches || target.disabled || target.querySelector("input")?.disabled) return;
+      const rect = target.getBoundingClientRect();
       const circle = document.createElement("span");
       circle.className = "ripple";
       circle.style.left = `${x-rect.left}px`; circle.style.top = `${y-rect.top}px`;
       circle.style.width = circle.style.height = `${Math.max(rect.width,rect.height)*2}px`;
-      picker.append(circle);
+      target.append(circle);
       circle.addEventListener("animationend", () => circle.remove(), {once:true});
       setTimeout(() => circle.remove(), 800);
     };
-    picker?.addEventListener("pointerdown", (e) => ripple(e.clientX,e.clientY));
-    picker?.addEventListener("keydown", (e) => {
-      if (["Enter", " "].includes(e.key)) { const r=picker.getBoundingClientRect(); ripple(r.left+r.width/2,r.top+r.height/2); }
+    document.querySelectorAll(".ripple-button").forEach((button) => {
+      button.addEventListener("pointerdown", (e) => ripple(button, e.clientX, e.clientY));
+      button.addEventListener("keydown", (e) => {
+        if (["Enter", " "].includes(e.key)) { const r=button.getBoundingClientRect(); ripple(button, r.left+r.width/2, r.top+r.height/2); }
+      });
     });
 
     const progress = document.querySelector("#scrollProgress");

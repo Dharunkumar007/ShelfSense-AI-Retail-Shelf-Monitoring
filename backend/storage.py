@@ -1,13 +1,20 @@
 """SQLite for one host; PostgreSQL for shared deployments."""
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 from sqlalchemy import Column, Float, Index, Integer, LargeBinary, MetaData, String, Table, Text, create_engine, event
+
+# Force Python to read the .env file.
+load_dotenv()
 
 ROOT = Path(__file__).resolve().parents[1]
 url = os.environ.get("DATABASE_URL", f"sqlite:///{ROOT / 'shelfsense.db'}")
+
+# Map PostgreSQL URLs to the installed psycopg2 driver.
 if url.startswith(("postgres://", "postgresql://")):
-    url = "postgresql+psycopg://" + url.split("://", 1)[1]
+    url = "postgresql+psycopg2://" + url.split("://", 1)[1]
 engine = create_engine(url, pool_pre_ping=True, **({"connect_args": {"timeout": 20}} if url.startswith("sqlite") else {}))
+
 if url.startswith("sqlite"):
     @event.listens_for(engine, "connect")
     def configure_sqlite(connection, _):
