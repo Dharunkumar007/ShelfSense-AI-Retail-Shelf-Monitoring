@@ -3,79 +3,27 @@
     {
       "id": "A1",
       "name": "Shelf 1 Left",
-      "expected_count": 11,
+      "expected_count": 83,
       "critical_threshold": 45,
       "low_threshold": 75,
       "bbox": [
         0,
-        2.9,
+        0,
         50,
-        20.7
+        93.0
       ]
     },
     {
       "id": "A2",
       "name": "Shelf 1 Right",
-      "expected_count": 11,
+      "expected_count": 83,
       "critical_threshold": 45,
       "low_threshold": 75,
       "bbox": [
         50,
-        2.9,
-        100,
-        20.7
-      ]
-    },
-    {
-      "id": "B1",
-      "name": "Shelf 2 Left",
-      "expected_count": 20,
-      "critical_threshold": 45,
-      "low_threshold": 75,
-      "bbox": [
         0,
-        18.7,
-        50,
-        43.5
-      ]
-    },
-    {
-      "id": "B2",
-      "name": "Shelf 2 Right",
-      "expected_count": 20,
-      "critical_threshold": 45,
-      "low_threshold": 75,
-      "bbox": [
-        50,
-        18.7,
         100,
-        43.5
-      ]
-    },
-    {
-      "id": "C1",
-      "name": "Shelf 3 Left",
-      "expected_count": 50,
-      "critical_threshold": 45,
-      "low_threshold": 75,
-      "bbox": [
-        0,
-        39.0,
-        50,
-        89.9
-      ]
-    },
-    {
-      "id": "C2",
-      "name": "Shelf 3 Right",
-      "expected_count": 50,
-      "critical_threshold": 45,
-      "low_threshold": 75,
-      "bbox": [
-        50,
-        39.0,
-        100,
-        89.9
+        93.0
       ]
     }
   ]
