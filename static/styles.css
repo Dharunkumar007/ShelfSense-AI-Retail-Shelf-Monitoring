@@ -56,7 +56,31 @@ button.button-danger{background:var(--danger);border-color:var(--danger);color:#
 @font-face{font-family:"Trykker";src:url("/static/fonts/Trykker-Regular.ttf") format("truetype");font-display:swap;font-weight:400}
 @font-face{font-family:"Ashfiana";src:url("/static/fonts/Ashfiana%20Oblique.otf") format("opentype");font-display:swap;font-style:italic}
 :root{--canvas:#eaf2f2;--surface:#ffffffd9;--surface-solid:#f8fbfb;--surface-raised:#dce9e9;--ink:#082b33;--muted:#49676d;--line:#afc8ca;--brand:#087681;--brand-hover:#055c66;--teal:#087681;--good:#08765f;--warn:#99610a;--danger:#b73942;--amber:#d09522;--coral:#cf5058;--sidebar:#071f26;--teal-soft:#d7eeee;--good-soft:#dcefe8;--warn-soft:#f8ecd4;--danger-soft:#f7dfe1;--info-soft:#dcebed;--metal:#789397;--focus:#1a7da8;--pointer-x:50vw;--pointer-y:50vh}
-:root[data-theme=dark]{--canvas:#06191e;--surface:#0b2930df;--surface-solid:#0b2930;--surface-raised:#12363e;--ink:#edf8f7;--muted:#afc7c9;--line:#365860;--brand:#43c4c8;--brand-hover:#68d5d7;--teal:#6ed6d5;--good:#52d5aa;--warn:#f3bf57;--danger:#ff7d84;--amber:#eeb84c;--coral:#f4777d;--sidebar:#041318;--teal-soft:#153e43;--good-soft:#123b31;--warn-soft:#42351f;--danger-soft:#47262b;--info-soft:#13353c;--metal:#91a9ac;--focus:#7cdcdf}
+:root[data-theme=dark] {
+--canvas: #090e17; /* Very dark premium navy background */
+--surface: #101827df; /* Translucent dark blue for glassmorphism */
+--surface-solid: #101827;/* Solid dark blue */
+--surface-raised: #1e293b;/* Raised slate-blue for hover states */
+--ink: #f8fafc; /* Crisp white text */
+--muted: #94a3b8; /* Muted slate text */
+--line: #334155; /* Premium blue-grey border */
+--brand: #3b82f6; /* Bright blue accent */
+--brand-hover: #60a5fa;
+--teal: #38bdf8; /* Sky blue for secondary accents */
+--good: #34d399;
+--warn: #fbbf24;
+--danger: #f87171;
+--amber: #fbbf24;
+--coral: #f87171;
+--sidebar: #040812; /* Deepest midnight blue for sidebar */
+--teal-soft: #172554;
+--good-soft: #064e3b;
+--warn-soft: #451a03;
+--danger-soft: #4c0519;
+--info-soft: #1e3a8a;
+--metal: #64748b;
+--focus: #7dd3fc;
+}
 html{scroll-behavior:smooth;overflow-x:hidden}body{font-family:"Trykker",Georgia,serif;background-color:var(--canvas);background-image:linear-gradient(145deg,color-mix(in srgb,var(--teal) 9%,transparent),transparent 34%),linear-gradient(315deg,color-mix(in srgb,#5275a8 8%,transparent),transparent 42%);line-height:1.45;overflow-x:hidden}button,input,select,textarea{font-family:"Trykker",Georgia,serif}h1,.page-heading h1{font-family:"Mainlux","Segoe UI",sans-serif;font-weight:300;font-size:clamp(26px,3vw,36px);line-height:1.05}h2,h3,.panel-title h2,.metric strong,.analysis-summary strong,.report-summary strong{font-family:"Flamenco","Segoe UI",sans-serif}h2,.panel-title h2{font-size:18px}.page-heading p{font-family:"Ashfiana","Trykker",serif;font-style:italic;font-size:16px}.eyebrow,.section-kicker,nav button,.button,.status-pill,th{font-family:"Flamenco","Segoe UI",sans-serif;font-weight:400}.eyebrow,.section-kicker{letter-spacing:.045em;text-transform:uppercase}
 main{max-width:1880px;padding:32px 38px 50px}.sidebar{background:linear-gradient(180deg,#071f26,#0a2d34);border-color:#29474d}.brand{height:72px;background:#f7f9f9;border:1px solid #91a8ab;border-radius:6px;padding:6px}.brand img{max-height:58px}.topbar{background:color-mix(in srgb,var(--canvas) 86%,transparent);backdrop-filter:blur(16px);border-bottom-color:var(--line)}.heading-divider{color:var(--brand)}
 .button,.icon-button,input,select,textarea{min-height:42px;border-radius:6px}.button,.icon-button{transition:color .18s ease,background-color .18s ease,border-color .18s ease,box-shadow .18s ease,opacity .18s ease,transform .18s ease}.button:hover,.icon-button:hover{transform:translateY(-1px)}.button:active,.icon-button:active{transform:translateY(0)}.button-primary{background:linear-gradient(125deg,var(--brand),#4c6fa3);border-color:transparent;box-shadow:0 8px 24px color-mix(in srgb,var(--brand) 24%,transparent)}.button-primary:hover{background:linear-gradient(125deg,var(--brand-hover),#6383b3);box-shadow:0 10px 30px color-mix(in srgb,var(--brand) 33%,transparent)}.button-secondary{background:var(--surface);backdrop-filter:blur(10px)}.icon-button{background:var(--surface)}.link-button{appearance:none;border:0;background:none;color:var(--muted);padding:0;cursor:pointer}.link-button:hover{color:var(--teal);text-decoration:underline}
@@ -83,3 +107,66 @@ h2,h3,.panel-title h2{font-weight:600}.page-heading p{font-family:var(--font-ui)
 main{grid-column:2;min-width:0}
 @media(max-width:1180px) and (min-width:801px){.sidebar{width:204px}}
 @media(max-width:800px){.sidebar{position:fixed;inset:auto 0 0 0;width:100%;height:70px;overflow:hidden}main{grid-column:auto}.page-heading p{font-size:12px}}
+
+/* =========================================
+   NUMBER INPUT & LABEL ALIGNMENT FIXES
+   ========================================= */
+
+/* 1. Detection Tuning & Form Labels (Force Horizontal) */
+.control-form label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* Push standard inputs to the next line */
+.control-form label > input:not([type="range"]):not([type="checkbox"]),
+.control-form label > select,
+.control-form label > textarea {
+    width: 100%;
+    margin-top: 6px;
+}
+
+/* Force the label text and the number stepper to sit on the SAME line perfectly */
+.control-form label:has(.number-stepper) {
+    flex-wrap: nowrap;
+    margin-bottom: 14px;
+}
+
+.control-form label:has(.number-stepper) > .number-stepper {
+    width: 140px;
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+/* 2. Inventory & Layout Table Alignment */
+#inventoryTable td {
+    vertical-align: middle;
+}
+
+/* Stack Critical & Low Thresholds neatly in their cell */
+#inventoryTable td:nth-child(4) .number-stepper {
+    width: 120px;
+    margin-bottom: 8px;
+}
+#inventoryTable td:nth-child(4) .number-stepper:last-child {
+    margin-bottom: 0;
+}
+
+/* Align Bounds L/T/R/B perfectly horizontal */
+.bounds-cell {
+    display: flex !important;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    border-bottom: none !important; /* Fixes border alignment issues on flex table cells */
+    height: 100%;
+}
+
+.bounds-cell .number-stepper {
+    margin: 0 !important;
+    width: 110px !important;
+    grid-template-columns: 28px minmax(36px, 1fr) 28px !important;
+}
