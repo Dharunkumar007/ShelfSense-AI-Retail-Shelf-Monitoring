@@ -1,5 +1,5 @@
-const CACHE_NAME = "shelfsense-v7";
-const VERSION = "20261002-7";
+const CACHE_NAME = "shelfsense-v8";
+const VERSION = "20261002-8";
 const APP_SHELL = ["/", ...["styles.css", "app.js", "appearance.js", "manifest.json"].map((name) => `/static/${name}?v=${VERSION}`), "/static/shelfsense-logo.jpeg"];
 
 self.addEventListener("install", (event) => {

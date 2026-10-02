@@ -73,3 +73,13 @@ input,select,textarea{width:100%;background-color:var(--surface-solid);border:1p
 @media(max-width:460px){.metric-grid,.analysis-summary,.report-summary{grid-template-columns:1fr}.actions{grid-template-columns:1fr auto}.actions .primary-cta{grid-column:1}.actions .theme-toggle{grid-column:2;grid-row:1}.file-picker{grid-column:1}.cookie-banner>div:last-child{flex-direction:column}.mobile-logo{width:170px}.panel-title{align-items:flex-start}.workspace-footer{align-items:flex-start;flex-direction:column}.workspace-footer>div{flex-direction:column;gap:8px}}
 @media(pointer:coarse),(prefers-reduced-motion:reduce){#cursorBeam{display:none}.reveal-in{animation:none}}
 @media print{#cursorBeam,.cookie-banner{display:none!important}.panel{border:0;box-shadow:none;background:#fff}}
+
+/* Operational typography and stable application shell */
+:root{--font-ui:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body,button,input,select,textarea{font-family:var(--font-ui);font-variant-numeric:tabular-nums}
+h2,h3,.panel-title h2,.metric strong,.analysis-summary strong,.report-summary strong,.eyebrow,.section-kicker,nav button,.button,.status-pill,th,.control-form output{font-family:var(--font-ui)}
+h2,h3,.panel-title h2{font-weight:600}.page-heading p{font-family:var(--font-ui);font-style:normal;font-size:13px}.eyebrow,.section-kicker{font-weight:600}.metric strong,.analysis-summary strong,.report-summary strong{font-weight:700}
+.sidebar{position:fixed;inset:0 auto 0 0;width:240px;height:100dvh;overflow-y:auto;overscroll-behavior:contain;z-index:40}
+main{grid-column:2;min-width:0}
+@media(max-width:1180px) and (min-width:801px){.sidebar{width:204px}}
+@media(max-width:800px){.sidebar{position:fixed;inset:auto 0 0 0;width:100%;height:70px;overflow:hidden}main{grid-column:auto}.page-heading p{font-size:12px}}

@@ -204,7 +204,7 @@ def test_removed_calibration_endpoint(client):
 def test_frontend_cache_headers_and_versioned_assets(client):
     root = client.get("/")
     assert root.headers["cache-control"] == "no-store"
-    assert 'styles.css?v=20261002-7' in root.text
-    assert 'app.js?v=20261002-7' in root.text
+    assert 'styles.css?v=20261002-8' in root.text
+    assert 'app.js?v=20261002-8' in root.text
     assert client.get("/sw.js").headers["cache-control"] == "no-store"
-    assert "must-revalidate" in client.get("/static/styles.css?v=20261002-7").headers["cache-control"]
+    assert "must-revalidate" in client.get("/static/styles.css?v=20261002-8").headers["cache-control"]

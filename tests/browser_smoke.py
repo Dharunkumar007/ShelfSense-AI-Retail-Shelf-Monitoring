@@ -43,6 +43,8 @@ def main():
                 assert page.locator("#cookieBanner").is_visible()
                 page.locator("#essentialCookies").click()
                 assert page.locator("#cookieBanner").is_hidden()
+                assert "Trykker" not in page.locator("body").evaluate("el => getComputedStyle(el).fontFamily")
+                assert "Flamenco" not in page.locator(".panel-title h2").first.evaluate("el => getComputedStyle(el).fontFamily")
                 assert page.locator("#monitorShelf img").count() == 0
                 assert page.locator("#occupancyValue").inner_text() == "--"
                 assert page.locator("html").get_attribute("data-theme") == "dark"
@@ -167,6 +169,8 @@ def main():
                     page.screenshot(path=f"/tmp/shelfsense-v4-{theme}-desktop.png",full_page=True)
                 page.evaluate("window.scrollTo(0,document.documentElement.scrollHeight)")
                 page.wait_for_function("document.querySelector('#scrollProgress').getAttribute('aria-valuenow') === '100'")
+                sidebar_box = page.locator(".sidebar").bounding_box()
+                assert sidebar_box and abs(sidebar_box["y"]) <= 1 and sidebar_box["height"] <= 1001
                 for width in [390,360,768,1440,1920]:
                     page.set_viewport_size({"width":width,"height":844 if width<800 else 1000})
                     for section in ["dashboard","monitor","analysis","alerts","inventory","reports","admin"]:
@@ -176,6 +180,7 @@ def main():
                         if width > 800:
                             assert page.locator(".brand img").evaluate("el => el.getBoundingClientRect().right <= document.querySelector('.sidebar').getBoundingClientRect().right")
                             assert not page.locator(".mobile-logo").is_visible()
+                            assert abs(page.locator(".sidebar").bounding_box()["y"]) <= 1
                         if width < 800:
                             assert page.locator(f'[data-page="{section}"] span').first.evaluate("""el => {
                                 const r=el.getBoundingClientRect(), n=el.closest('nav').getBoundingClientRect();
